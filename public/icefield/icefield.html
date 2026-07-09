@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FDC - Ice Field</title>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="/IP.js"></script>
+<style>
+/* =====================================================
+   FDC Design System – identisch mit allen anderen Spielen
+   ===================================================== */
+:root {
+  --bg-color: #010101;
+  --card-bg: #0b0e11;
+  --primary-green: #53fc18;
+  --primary-red: #ef4444;
+  --text-main: #ffffff;
+  --text-dim: #94a3b8;
+  --border: #1a1c20;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: "Inter", sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --- Header (gleich wie würfel.html / plinko.html) --- */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 50px;
+  background: var(--bg-color);
+  border-bottom: 1px solid #111;
+}
+.brand-text { display: flex; flex-direction: column; min-width: 320px; }
+.main-title {
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: 30px;
+  color: var(--primary-green);
+  margin: 0;
+}
+.sub-title {
+  font-size: 13.5px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--primary-green);
+  text-align: justify;
+  text-align-last: justify;
+  margin-top: 5px;
+  width: 100%;
+}
+
+main {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+/* Haupt-Container mit drei Panels */
+#game-container {
+  display: flex;
+  gap: 24px;
+  background: var(--card-bg);
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+/* =====================================================
+   LINKES PANEL – Steuerung
+   ===================================================== */
+#ui-panel {
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Info-Box (Guthaben / aktueller Gewinn) */
+.stat-box {
+  background: #000;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.stat-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+.value      { font-size: 22px; font-weight: 700; color: var(--primary-green); }
+
+/* Einsatz-Input */
+input[type="number"] {
+  width: 100%;
+  background: #000;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 12px;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+/* Schnell-Einsatz Buttons ($10 / $50 / $100) */
+.quick-bets { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 8px; }
+.qb {
+  background: #222;
+  color: #fff;
+  border: none;
+  padding: 7px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: 0.15s;
+}
+.qb:hover { background: #333; }
+
+/* Schwierigkeitsauswahl (Easy / Mid / Hard) */
+.diff-row { display: flex; gap: 6px; }
+.diff-btn {
+  flex: 1;
+  background: #111418;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 9px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  transition: 0.2s;
+}
+.diff-btn:hover:not(:disabled) { border-color: var(--primary-green); }
+/* Aktive Schwierigkeit leuchtet grün */
+.diff-btn.active {
+  background: rgba(83,252,24,0.1);
+  border-color: var(--primary-green);
+  color: var(--primary-green);
+}
+.diff-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Buttons (Start & Cash Out) */
+.game-btn {
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: 0.2s;
+  width: 100%;
+}
+#start-btn {
+  background: var(--primary-green);
+  color: #000;
+  box-shadow: 0 0 15px rgba(83,252,24,0.2);
+}
+#start-btn:hover:not(:disabled) { filter: brightness(1.2); box-shadow: 0 0 25px rgba(83,252,24,0.5); }
+#start-btn:disabled { background: #1e293b; color: #475569; cursor: not-allowed; box-shadow: none; }
+
+/* Cash-Out-Button – anfangs versteckt, erscheint nach 1. sicheren Tile */
+#cashout-btn {
+  background: #fbbf24; /* Gold */
+  color: #000;
+  box-shadow: 0 0 15px rgba(251,191,36,0.2);
+  display: none;
+}
+#cashout-btn:hover { filter: brightness(1.1); box-shadow: 0 0 25px rgba(251,191,36,0.4); }
+#cashout-btn.visible { display: block; }
+
+/* Verlaufs-Anzeige */
+#history {
+  background: #000;
+  border-radius: 8px;
+  padding: 10px;
+  max-height: 110px;
+  overflow-y: auto;
+  font-size: 13px;
+  border: 1px solid var(--border);
+}
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #111;
+}
+
+/* =====================================================
+   MITTLERES PANEL – Das 5×5 Ice Grid
+   ===================================================== */
+#ice-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 80px);
+  grid-template-rows:    repeat(5, 80px);
+  gap: 8px;
+  padding: 16px;
+  background: #000;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+/* Einzelne Eis-Kachel */
+.tile {
+  width: 80px;
+  height: 80px;
+  /* Eisblau-Farbverlauf */
+  background: linear-gradient(135deg, #1e3a5f, #1e4976, #1a3355);
+  border: 1px solid rgba(96,165,250,0.3);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 30px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.2s;
+  user-select: none;
+}
+/* Eisglanz-Reflexion (kleines weißes Rechteck oben links) */
+.tile::before {
+  content: '';
+  position: absolute;
+  top: 6px; left: 10px;
+  width: 20px; height: 7px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 4px;
+  transform: rotate(-20deg);
+  pointer-events: none;
+}
+/* Hover-Effekt nur auf aktiven (nicht aufgedeckten) Tiles */
+.tile:hover:not(.revealed):not(.locked) {
+  transform: scale(1.07);
+  box-shadow: 0 0 16px rgba(96,165,250,0.5);
+  border-color: rgba(96,165,250,0.7);
+}
+
+/* Sicheres Tile: grüner Schimmer + Schneeflocke */
+.tile.safe {
+  background: linear-gradient(135deg, rgba(83,252,24,0.12), rgba(83,252,24,0.04));
+  border-color: rgba(83,252,24,0.6);
+  cursor: default;
+  animation: popIn 0.2s ease;
+}
+/* Loch-Tile: roter Schimmer + Zitter-Animation */
+.tile.hole {
+  background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.05));
+  border-color: rgba(239,68,68,0.6);
+  cursor: default;
+  animation: shake 0.3s ease;
+}
+/* Gesperrtes Tile (Spiel nicht aktiv) */
+.tile.locked { cursor: not-allowed; opacity: 0.6; }
+
+@keyframes popIn {
+  0%   { transform: scale(0.75); opacity: 0.5; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  25%     { transform: translateX(-5px); }
+  75%     { transform: translateX(5px); }
+}
+
+/* =====================================================
+   RECHTES PANEL – Multiplikatoren-Tabelle
+   ===================================================== */
+#mult-panel {
+  width: 195px;
+  background: #000;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+.panel-title {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+}
+.mult-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  background: #090b0d;
+  border: 1px solid #14171c;
+  transition: 0.2s;
+}
+/* Aktuelle Fortschritts-Zeile leuchtet grün */
+.mult-row.current {
+  background: rgba(83,252,24,0.12);
+  border-color: var(--primary-green);
+  color: var(--primary-green);
+  box-shadow: 0 0 10px rgba(83,252,24,0.15);
+}
+/* Bereits erreichte Zeilen ausgrauen */
+.mult-row.passed { opacity: 0.35; }
+
+.mute-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- ======================================================
+     HEADER – FDC Branding (identisch mit allen Spielen)
+     ====================================================== -->
+<header>
+  <div class="brand-text">
+    <div class="main-title">FD₵</div>
+    <div class="sub-title">Friedrich-Dessauer-Casino</div>
+  </div>
+  <button class="mute-toggle" onclick="toggleMute()" id="mute-btn">🔊 SOUND ON</button>
+</header>
+
+<main>
+  <div id="game-container">
+
+    <!-- ====================================================
+         LINKES PANEL – Spielsteuerung
+         ==================================================== -->
+    <div id="ui-panel">
+
+      <!-- Guthaben -->
+      <div class="stat-box">
+        <div class="stat-label">Guthaben</div>
+        <div id="balance" class="value">$10,000.00</div>
+      </div>
+
+      <!-- Einsatz-Eingabe -->
+      <div>
+        <input type="number" id="bet-input" value="100" min="1" />
+        <div class="quick-bets">
+          <button class="qb" onclick="setBet(10)">$10</button>
+          <button class="qb" onclick="setBet(50)">$50</button>
+          <button class="qb" onclick="setBet(100)">$100</button>
+        </div>
+      </div>
+
+      <!-- Schwierigkeit wählen -->
+      <div>
+        <div class="stat-label" style="margin-bottom:6px">Schwierigkeit</div>
+        <div class="diff-row">
+          <button class="diff-btn active" id="d-easy"   onclick="setDiff('easy',   this)">Easy<br><small style="font-weight:400;font-size:10px">3 Löcher</small></button>
+          <button class="diff-btn"        id="d-medium" onclick="setDiff('medium', this)">Mid<br> <small style="font-weight:400;font-size:10px">8 Löcher</small></button>
+          <button class="diff-btn"        id="d-hard"   onclick="setDiff('hard',   this)">Hard<br><small style="font-weight:400;font-size:10px">15 Löcher</small></button>
+        </div>
+      </div>
+
+      <!-- Aktueller Gewinn wenn Cash Out jetzt -->
+      <div class="stat-box">
+        <div class="stat-label">Aktueller Gewinn</div>
+        <div id="current-win" class="value">–</div>
+      </div>
+
+      <!-- Start-Button -->
+      <button class="game-btn" id="start-btn" onclick="startGame()">Spiel Starten</button>
+
+      <!-- Cash-Out-Button (erscheint nach 1. sicherem Tile) -->
+      <button class="game-btn" id="cashout-btn" onclick="cashOut()">💰 Cash Out</button>
+
+      <!-- Verlauf der letzten Runden -->
+      <div id="history"></div>
+
+    </div>
+
+    <!-- ====================================================
+         MITTLERES PANEL – Ice Grid (5×5 = 25 Tiles)
+         ==================================================== -->
+    <div id="ice-grid">
+      <!-- Wird per JavaScript generiert -->
+    </div>
+
+    <!-- ====================================================
+         RECHTES PANEL – Multiplikatoren-Tabelle
+         ==================================================== -->
+    <div id="mult-panel">
+      <div class="panel-title" id="mult-title">Multiplikatoren</div>
+      <!-- Wird per JavaScript befüllt -->
+    </div>
+
+  </div>
+</main>
+
+<script>
+// ================================================================
+//  ICE FIELD – Spiellogik
+//
+//  Ähnlich wie "Mines" bei echten Online-Casinos (z.B. Stake):
+//  - 25 Tiles (5×5 Grid)
+//  - Einige sind sichere Eisfelder (❄️), andere sind Löcher (🕳️)
+//  - Jede sicher aufgedeckte Kachel erhöht den Multiplikator
+//  - Du kannst jederzeit "Cash Out" drücken bevor du ins Loch fällst
+//  - Triffst du ein Loch, verlierst du deinen Einsatz
+// ================================================================
+
+// ── Konfiguration ────────────────────────────────────────────────
+const TOTAL = 25; // 5×5 Grid → 25 Tiles gesamt
+
+// Anzahl der Minen je nach Schwierigkeit
+const DIFF_CONFIG = {
+  easy:   { mines: 3  },
+  medium: { mines: 8  },
+  hard:   { mines: 15 }
+};
+
+// ── Spielzustand ────────────────────────────────────────────────
+let balance    = 3000;      // Aktuelles Guthaben des Spielers
+let currentBet = 100;        // Höhe des gesetzten Einsatzes
+let isMuted    = false;      // Sound an/aus
+let gameActive = false;      // Läuft gerade eine Runde?
+let mineSet    = new Set();  // Enthält die Indizes aller Loch-Tiles
+let revealed   = 0;          // Anzahl sicher aufgedeckter Tiles
+let difficulty = 'easy';     // Aktuelle Schwierigkeit
+let numMines   = 3;          // Anzahl Löcher (ändert sich mit Schwierigkeit)
+
+// socket wird initialisiert und sobald er server update balance schick, wird das gemacht.
+const socket = io(`http://${IP}:3000`, {
+    withCredentials: true,
+    transports: ["websocket"]
+});
+
+socket.on("updateBalance", (newBalance) => {
+    balance = newBalance;
+    updateBalance();
+});
+
+// ── Guthaben-Anzeige aktualisieren ──────────────────────────────
+function updateBalance() {
+  document.getElementById("balance").innerText =
+    `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+}
+
+// Schnell-Einsatz setzen
+function setBet(v) {
+  if (!gameActive) document.getElementById("bet-input").value = v;
+}
+
+// ── Sound-Engine (gleicher Aufbau wie in würfel.html) ────────────
+function toggleMute() {
+  isMuted = !isMuted;
+  document.getElementById("mute-btn").innerText = isMuted ? "🔇 MUTED" : "🔊 SOUND ON";
+}
+
+function tone(freq, type, dur, vol) {
+  if (isMuted) return;
+  try {
+    const a = new (window.AudioContext || window.webkitAudioContext)();
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, a.currentTime);
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(); o.stop(a.currentTime + dur);
+  } catch(e) {}
+}
+
+const sounds = {
+  // Heller Kristall-Ton beim sicheren Aufdecken
+  safe:  () => tone(880, "sine", 0.12, 0.06),
+  // Dumpfer Einbruch-Sound beim Loch
+  hole:  () => { tone(120, "sawtooth", 0.3, 0.06); setTimeout(() => tone(90, "sawtooth", 0.3, 0.04), 150); },
+  // Gewinn-Jingle beim Cash Out
+  win:   () => {
+    tone(523, "sine", 0.15, 0.08);
+    setTimeout(() => tone(659, "sine", 0.15, 0.08), 100);
+    setTimeout(() => tone(784, "sine", 0.3,  0.08), 200);
+  },
+  // Kurzer negativer Ton bei Verlust
+  lose:  () => tone(180, "sawtooth", 0.3, 0.05)
+};
+
+// ── Multiplikator-Berechnung ─────────────────────────────────────
+//
+//  Mathematik dahinter:
+//  Wahrscheinlichkeit, k sichere Tiles in Folge aufzudecken:
+//    P = (safe * (safe-1) * ... * (safe-k+1))
+//        / (total * (total-1) * ... * (total-k+1))
+//
+//  Multiplikator = (1 / P) × 0.97   → 3% House Edge
+//
+//  Beispiel Easy (3 Minen, 22 sichere Tiles von 25):
+//    k=1:  P = 22/25 = 0.88  → Mult ≈ 1.10x
+//    k=5:  P ≈ 0.54          → Mult ≈ 1.79x
+//    k=10: P ≈ 0.17          → Mult ≈ 5.62x
+//
+function getMult(k) {
+  if (k === 0) return 1.0;
+  const safe = TOTAL - numMines;
+  let p = 1;
+  // Produkt der Wahrscheinlichkeiten für jeden Schritt
+  for (let i = 0; i < k; i++) p *= (safe - i) / (TOTAL - i);
+  return (1 / p) * 0.97; // Mit House Edge
+}
+
+// ── Multiplikatoren-Tabelle aufbauen ────────────────────────────
+function buildMultTable() {
+  const panel = document.getElementById("mult-panel");
+  // Titel mit aktueller Schwierigkeit
+  document.getElementById("mult-title").textContent =
+    `Multiplikatoren (${difficulty === 'easy' ? 'Easy' : difficulty === 'medium' ? 'Mid' : 'Hard'}, ${numMines} Löcher)`;
+
+  // Alte Einträge löschen
+  panel.querySelectorAll(".mult-row").forEach(r => r.remove());
+
+  const safe  = TOTAL - numMines;
+  const limit = Math.min(safe, 15); // Maximal 15 Einträge anzeigen
+
+  for (let k = 1; k <= limit; k++) {
+    const row = document.createElement("div");
+    row.className = "mult-row";
+    row.id = `mr-${k}`;
+    row.innerHTML = `<span>${k} Feld${k > 1 ? 'er' : ''}</span><span>${getMult(k).toFixed(2)}x</span>`;
+    panel.appendChild(row);
+  }
+}
+
+// Aktuellen Fortschritt in der Tabelle hervorheben
+function updateMultTable() {
+  document.querySelectorAll(".mult-row").forEach(row => {
+    const k = parseInt(row.id.split("-")[1]);
+    row.classList.remove("current", "passed");
+    if      (k === revealed) row.classList.add("current");
+    else if (k < revealed)  row.classList.add("passed");
+  });
+}
+
+// ── Schwierigkeit wechseln ───────────────────────────────────────
+function setDiff(d, btn) {
+  if (gameActive) return; // Nicht während einer Runde wechseln
+  difficulty = d;
+  numMines   = DIFF_CONFIG[d].mines;
+
+  // Button-Zustände aktualisieren
+  document.querySelectorAll(".diff-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+
+  // Tabelle und Grid neu aufbauen
+  buildMultTable();
+  buildGrid();
+}
+
+// ── Grid aufbauen (zu Spielbeginn oder bei Schwierigkeitswechsel) ─
+function buildGrid() {
+  const g = document.getElementById("ice-grid");
+  g.innerHTML = "";
+
+  for (let i = 0; i < TOTAL; i++) {
+    const t = document.createElement("div");
+    t.className   = "tile locked"; // Gesperrt bis das Spiel startet
+    t.dataset.i   = i;
+    t.onclick     = () => clickTile(i);
+    g.appendChild(t);
+  }
+}
+
+// ── Minen zufällig platzieren ────────────────────────────────────
+function placeMines() {
+  mineSet.clear();
+  // Solange zufällige Indizes hinzufügen bis die gewünschte Anzahl erreicht ist
+  while (mineSet.size < numMines) mineSet.add(Math.floor(Math.random() * TOTAL));
+}
+
+// ── Spiel starten ───────────────────────────────────────────────
+function startGame() {
+  // Einsatz validieren
+  currentBet = parseFloat(document.getElementById("bet-input").value);
+  if (!currentBet || currentBet <= 0 || currentBet > balance) {
+    alert("Ungültiger Einsatz!"); return;
+  }
+
+  // Einsatz vom Guthaben abziehen
+  socket.emit("updateBalance", (-currentBet));
+
+  // Spielzustand zurücksetzen
+  gameActive = true;
+  revealed   = 0;
+  placeMines();
+  buildGrid();
+  buildMultTable();
+
+  // Alle Tiles entsperren (klickbar machen)
+  document.querySelectorAll(".tile").forEach(t => t.classList.remove("locked"));
+
+  // UI aktualisieren
+  document.getElementById("start-btn").disabled = true;
+  document.getElementById("bet-input").disabled = true;
+  document.querySelectorAll(".diff-btn").forEach(b => b.disabled = true);
+  document.getElementById("cashout-btn").classList.remove("visible");
+  document.getElementById("current-win").innerText = `1.00x ($${currentBet.toFixed(2)})`;
+}
+
+// ── Tile anklicken ───────────────────────────────────────────────
+function clickTile(i) {
+  if (!gameActive) return;
+
+  const t = document.querySelector(`.tile[data-i="${i}"]`);
+  // Tile muss existieren und darf noch nicht aufgedeckt/gesperrt sein
+  if (!t || t.classList.contains("revealed") || t.classList.contains("locked")) return;
+
+  t.classList.add("revealed");
+
+  if (mineSet.has(i)) {
+    // ── LOCH! Verloren ──────────────────────────────────────────
+    t.classList.add("hole");
+    t.textContent = "🕳️";
+    sounds.hole();
+    endGame(false);
+
+  } else {
+    // ── SICHER! Weitermachen ────────────────────────────────────
+    t.classList.add("safe");
+    t.textContent = "❄️";
+    sounds.safe();
+    revealed++;
+
+    // Aktuellen Multiplikator & potenziellen Gewinn anzeigen
+    const mult = getMult(revealed);
+    document.getElementById("current-win").innerText =
+      `${mult.toFixed(2)}x ($${(currentBet * mult).toFixed(2)})`;
+
+    // Cash-Out-Button ab dem ersten sicheren Tile anzeigen
+    document.getElementById("cashout-btn").classList.add("visible");
+    updateMultTable();
+
+    // Automatisch auszahlen wenn alle sicheren Tiles aufgedeckt wurden
+    if (revealed >= TOTAL - numMines) cashOut();
+  }
+}
+
+// ── Cash Out ─────────────────────────────────────────────────────
+function cashOut() {
+  if (!gameActive || revealed === 0) return;
+
+  const mult = getMult(revealed);
+  const win  = currentBet * mult;
+  socket.emit("updateBalance", (win));
+
+  sounds.win();
+  addHistory(true, mult, win);
+  endGame(true);
+}
+
+// ── Spiel beenden (Sieg oder Niederlage) ─────────────────────────
+function endGame(won) {
+  gameActive = false;
+
+  // Alle Minen sichtbar machen (Aufdeckung)
+  mineSet.forEach(idx => {
+    const t = document.querySelector(`.tile[data-i="${idx}"]`);
+    if (t && !t.classList.contains("hole")) {
+      t.classList.add("revealed", "hole", "locked");
+      t.textContent = "🕳️";
+    }
+  });
+
+  // Alle nicht aufgedeckten Tiles sperren
+  document.querySelectorAll(".tile:not(.revealed)").forEach(t => t.classList.add("locked"));
+
+  if (!won) {
+    sounds.lose();
+    document.getElementById("current-win").innerText = `-$${currentBet.toFixed(2)}`;
+    addHistory(false, 0, -currentBet);
+  }
+
+  // Buttons für nächste Runde freigeben
+  document.getElementById("start-btn").disabled = false;
+  document.getElementById("bet-input").disabled = false;
+  document.querySelectorAll(".diff-btn").forEach(b => b.disabled = false);
+  document.getElementById("cashout-btn").classList.remove("visible");
+}
+
+// ── Verlaufs-Eintrag hinzufügen ──────────────────────────────────
+function addHistory(won, mult, amount) {
+  const h    = document.getElementById("history");
+  const item = document.createElement("div");
+  item.className = "history-item";
+
+  if (won) {
+    const c = mult >= 2 ? "var(--primary-green)" : "#fff";
+    item.innerHTML = `<span>${mult.toFixed(2)}x</span><span style="color:${c}">+$${amount.toFixed(2)}</span>`;
+  } else {
+    item.innerHTML = `<span>🕳️ Loch</span><span style="color:var(--primary-red)">-$${Math.abs(amount).toFixed(2)}</span>`;
+  }
+
+  h.prepend(item);
+  if (h.children.length > 8) h.removeChild(h.lastChild);
+}
+
+// ── Initialisierung beim Seitenstart ─────────────────────────────
+buildMultTable();
+buildGrid();
+updateBalance();
+</script>
+
+</body>
+</html>

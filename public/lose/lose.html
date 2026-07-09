@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FDC - Rubbellose</title>
+<link rel="stylesheet" href="/lose/lose.css">
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="/IP.js"></script>
+</head>
+<body>
+<header>
+<div class="branding">
+<div class="brand-text">
+<div class="main-title">FD₵</div>
+<div class="sub-title">Friedrich-Dessauer-Casino</div>
+</div>
+</div>
+<button class="mute-toggle" onclick="toggleMute()" id="mute-btn">
+🔊 SOUND ON
+</button>
+</header>
+
+<main>
+<div id="game-container">
+<!-- LINKES PANEL: Steuerung -->
+<div id="ui-panel">
+<div class="stat-box">
+<div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">
+Balance
+</div>
+<div id="balance" class="value"></div>
+</div>
+
+<div class="bet-controls">
+<input type="number" id="bet-input" value="100" />
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 10px;">
+<button onclick="setBet(10)" style="background: #222; color: #fff; border: none; padding: 8px; cursor: pointer;">$10</button>
+<button onclick="setBet(50)" style="background: #222; color: #fff; border: none; padding: 8px; cursor: pointer;">$50</button>
+<button onclick="setBet(100)" style="background: #222; color: #fff; border: none; padding: 8px; cursor: pointer;">$100</button>
+</div>
+</div>
+
+<button id="buy-btn" onclick="buyTicket()">Los Kaufen</button>
+<div id="history"></div>
+</div>
+
+<!-- MITTLERES PANEL: Rubbellos Gitter -->
+<div id="scratch-board">
+<!-- Felder werden via JS generiert -->
+</div>
+
+<!-- RECHTES PANEL: Gewinnchancen & Übersicht -->
+<div id="odds-panel">
+<div class="panel-title">Mögliche Gewinne</div>
+<div id="odds-list">
+<!-- Wird automatisch befüllt -->
+</div>
+</div>
+
+</div>
+</main>
+
+<script src="/lose/lose.js"></script>
+</body>
+</html>

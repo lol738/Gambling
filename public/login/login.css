@@ -1,0 +1,183 @@
+:root {
+    --bg-color: #000000;
+    --card-bg: #0b0e11;
+    --primary-green: #53fc18;
+    --text-main: #ffffff;
+    --text-dim: #94a3b8;
+    --border: #1a1c20;
+}
+
+/* GLOBAL */
+body {
+    margin: 0;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: "Inter", sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* HEADER (wie Casino Seite) */
+header {
+    display: flex;
+    align-items: center;
+    padding: 20px 50px;
+    border-bottom: 1px solid #111;
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.main-title {
+    font-size: 72px;
+    font-weight: 900;
+    letter-spacing: 30px;
+    color: var(--primary-green);
+    margin: 0;
+}
+
+.sub-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--primary-green);
+}
+
+/* CENTER */
+main {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* LOGIN CARD */
+.login-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    padding: 30px;
+    border-radius: 12px;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* TITLE */
+.title {
+    margin: 0;
+    font-size: 20px;
+    color: var(--primary-green);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* INPUTS */
+input {
+    background: #000;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 12px;
+    border-radius: 6px;
+    outline: none;
+    transition: 0.2s;
+}
+
+input:focus {
+    border-color: var(--primary-green);
+}
+
+/* ERROR STATE */
+input.error {
+    border-color: red;
+    box-shadow: 0 0 10px rgba(255,0,0,0.3);
+}
+
+/* BUTTON */
+button {
+    background: var(--primary-green);
+    color: #000;
+    border: none;
+    padding: 14px;
+    font-weight: 900;
+    text-transform: uppercase;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:disabled {
+    background: #1e293b;
+    color: #475569;
+    cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+    filter: brightness(1.2);
+}
+
+/* LINK */
+.link {
+    color: var(--primary-green);
+    text-decoration: none;
+    font-size: 12px;
+    text-align: center;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Button + Register nebeneinander */
+.button-row {
+    display: flex;
+    gap: 10px;
+}
+
+/* Login Button */
+#loginButton {
+    flex: 1;
+    background: var(--primary-green);
+    color: #000;
+    border: none;
+    padding: 14px;
+    font-weight: 900;
+    text-transform: uppercase;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#loginButton:disabled {
+    background: #1e293b;
+    color: #475569;
+    cursor: not-allowed;
+}
+
+/* Register Button (optisch gleichmäßig daneben) */
+.register-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: transparent;
+    border: 1px solid var(--primary-green);
+    color: var(--primary-green);
+
+    text-decoration: none;
+    font-weight: 800;
+    text-transform: uppercase;
+    border-radius: 8px;
+
+    transition: 0.2s;
+}
+
+.register-btn:hover {
+    background: rgba(83, 252, 24, 0.1);
+}

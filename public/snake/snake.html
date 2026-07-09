@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake & Stake</title>
+    <link rel="stylesheet" href="/snake/snake.css">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/IP.js"></script>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>SNAKE <span class="gold">&</span> STAKE</h1>
+            <div class="stats">
+                <div class="stat-box">Multiplier: <span id="multiplier">1.0</span>x</div>
+                <div class="stat-box gold">Potential: $<span id="payout">0</span></div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        
+        <div class="instructions">
+            <p>Eat to grow the multiplier. Reach the <span class="exit-text">GOLDEN EXIT</span> to cash out!</p>
+            <button id="startBtn">Start New Run ($10)</button>
+        </div>
+    </div>
+    <script src="/snake/snake.js"></script>
+</body>
+</html>

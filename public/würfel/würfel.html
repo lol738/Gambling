@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FDC - Würfel</title>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="/IP.js"></script>
+<style>
+:root {
+--bg-color: #000000;
+--card-bg: #0b0e11;
+--primary-green: #53fc18;
+--primary-red: #ef4444;
+--text-main: #ffffff;
+--text-dim: #94a3b8;
+--border: #1a1c20;
+}
+
+body {
+margin: 0;
+background-color: var(--bg-color);
+color: var(--text-main);
+font-family: "Inter", sans-serif;
+display: flex;
+flex-direction: column;
+height: 100vh;
+overflow: hidden;
+}
+
+header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 20px 50px;
+background: var(--bg-color);
+border-bottom: 1px solid #111;
+}
+
+.branding {
+display: flex;
+align-items: center;
+gap: 25px;
+}
+
+.brand-text {
+display: flex;
+flex-direction: column;
+min-width: 320px;
+}
+.main-title {
+font-size: 72px;
+font-weight: 900;
+line-height: 0.9;
+letter-spacing: 30px;
+color: var(--primary-green);
+margin: 0;
+}
+
+.sub-title {
+font-size: 13.5px;
+text-transform: uppercase;
+font-weight: 600;
+color: var(--primary-green);
+text-align: justify;
+text-align-last: justify;
+margin-top: 5px;
+width: 100%;
+}
+
+main {
+flex-grow: 1;
+display: flex;
+justify-content: center;
+align-items: center;
+padding: 20px;
+}
+
+#game-container {
+display: flex;
+gap: 24px;
+background: var(--card-bg);
+padding: 24px;
+border-radius: 16px;
+border: 1px solid var(--border);
+}
+
+#ui-panel {
+width: 240px;
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+
+.stat-box {
+background: #000;
+padding: 12px 16px;
+border-radius: 8px;
+border: 1px solid var(--border);
+}
+.value {
+font-size: 24px;
+font-weight: 700;
+color: var(--primary-green);
+}
+
+input {
+width: 100%;
+background: #000;
+border: 1px solid #333;
+color: #fff;
+padding: 12px;
+border-radius: 6px;
+box-sizing: border-box;
+}
+
+.game-btn {
+border: none;
+padding: 15px;
+border-radius: 8px;
+font-weight: 900;
+font-size: 16px;
+cursor: pointer;
+text-transform: uppercase;
+transition: 0.2s;
+}
+
+#roll-btn {
+background: var(--primary-green);
+color: #000;
+box-shadow: 0 0 15px rgba(83, 252, 24, 0.2);
+}
+#roll-btn:hover:not(:disabled) { filter: brightness(1.2); box-shadow: 0 0 25px rgba(83, 252, 24, 0.5); }
+#roll-btn:disabled { background: #1e293b; color: #475569; cursor: not-allowed; box-shadow: none; }
+
+.choice-buttons {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 10px;
+}
+
+.choice-btn {
+background: #111418;
+border: 1px solid #22252a;
+color: #fff;
+}
+.choice-btn:hover:not(:disabled) { border-color: var(--primary-green); background: #161b22; }
+.choice-btn:disabled { color: #444; border-color: #111; cursor: not-allowed; }
+.choice-btn.selected { background: #1e293b; border-color: var(--primary-green); color: var(--primary-green); }
+
+#dice-area {
+width: 400px;
+height: 400px;
+background: #000;
+border-radius: 12px;
+border: 1px solid var(--border);
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+position: relative;
+perspective: 1200px;
+transform-style: preserve-3d;
+}
+
+.cube-wrapper {
+width: 100px;
+height: 100px;
+perspective: 1200px;
+transform-style: preserve-3d;
+}
+
+.cube {
+width: 100px;
+height: 100px;
+position: relative;
+transform-style: preserve-3d;
+transform: rotateX(-20deg) rotateY(20deg);
+transition: transform 1.2s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.face {
+position: absolute;
+width: 100px;
+height: 100px;
+background: #111418;
+border: 2px solid var(--primary-green);
+color: var(--primary-green);
+font-size: 38px;
+font-weight: 900;
+display: flex;
+justify-content: center;
+align-items: center;
+border-radius: 14px;
+box-shadow: inset 0 0 15px rgba(83, 252, 24, 0.2);
+box-sizing: border-box;
+backface-visibility: visible;
+}
+
+.face1 { transform: rotateY(0deg) translateZ(50px); }
+.face2 { transform: rotateY(90deg) translateZ(50px); }
+.face3 { transform: rotateX(90deg) translateZ(50px); }
+.face4 { transform: rotateX(-90deg) translateZ(50px); }
+.face5 { transform: rotateY(-90deg) translateZ(50px); }
+.face6 { transform: rotateY(180deg) translateZ(50px); }
+
+#status-text {
+margin-top: 40px;
+font-size: 16px;
+font-weight: bold;
+min-height: 24px;
+text-transform: uppercase;
+letter-spacing: 1px;
+text-align: center;
+}
+
+#multiplier-panel {
+width: 220px;
+background: #000;
+border-radius: 12px;
+border: 1px solid var(--border);
+padding: 16px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+box-sizing: border-box;
+}
+
+.panel-title {
+font-size: 12px;
+color: var(--text-dim);
+text-transform: uppercase;
+font-weight: bold;
+letter-spacing: 1px;
+border-bottom: 1px solid var(--border);
+padding-bottom: 6px;
+}
+
+.mult-row {
+display: flex;
+justify-content: space-between;
+padding: 8px 12px;
+background: #090b0d;
+border: 1px solid #14171c;
+border-radius: 6px;
+font-size: 14px;
+font-weight: bold;
+}
+
+.mult-row.active {
+background: rgba(83, 252, 24, 0.15);
+border-color: var(--primary-green);
+color: var(--primary-green);
+box-shadow: 0 0 15px rgba(83, 252, 24, 0.2);
+}
+
+#history {
+background: #000;
+border-radius: 8px;
+padding: 10px;
+max-height: 110px;
+overflow-y: auto;
+font-size: 13px;
+border: 1px solid var(--border);
+}
+.history-item {
+display: flex;
+justify-content: space-between;
+padding: 4px 0;
+border-bottom: 1px solid #111;
+}
+
+.mute-toggle {
+background: none;
+border: 1px solid var(--border);
+color: var(--text-dim);
+padding: 10px 20px;
+border-radius: 5px;
+cursor: pointer;
+}
+</style>
+</head>
+<body>
+<header>
+<div class="branding">
+<div class="brand-text">
+<div class="main-title">FD₵</div>
+<div class="sub-title">Friedrich-Dessauer-Casino</div>
+</div>
+</div>
+<button class="mute-toggle" onclick="toggleMute()" id="mute-btn">
+🔊 SOUND ON
+</button>
+</header>
+
+<main>
+<div id="game-container">
+<div id="ui-panel">
+<div class="stat-box">
+<div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Guthaben</div>
+<div id="balance" class="value">$10,000.00</div>
+</div>
+
+<div class="bet-controls">
+<input type="number" id="bet-input" value="100" />
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 10px;">
+<button onclick="setBet(10)" style="background: #222; color: #fff; border: none; padding: 6px; cursor: pointer;">$10</button>
+<button onclick="setBet(50)" style="background: #222; color: #fff; border: none; padding: 6px; cursor: pointer;">$50</button>
+<button onclick="setBet(100)" style="background: #222; color: #fff; border: none; padding: 6px; cursor: pointer;">$100</button>
+</div>
+</div>
+
+<div class="choice-buttons">
+<button id="btn-under" class="game-btn choice-btn" onclick="selectPrediction('under')">Unter 4</button>
+<button id="btn-over" class="game-btn choice-btn" onclick="selectPrediction('over')">Über 3</button>
+</div>
+
+<button id="roll-btn" class="game-btn" onclick="playDice()" disabled>Würfeln</button>
+<div id="history"></div>
+</div>
+
+<div id="dice-area">
+<div class="cube-wrapper">
+<div class="cube" id="cube-element">
+<div class="face face1">1</div>
+<div class="face face6">6</div>
+<div class="face face3">3</div>
+<div class="face face4">4</div>
+<div class="face face2">2</div>
+<div class="face face5">5</div>
+</div>
+</div>
+<div id="status-text">Wähle Unter oder Über!</div>
+</div>
+
+<div id="multiplier-panel">
+<div class="panel-title">Cyber Multiplikator</div>
+<div class="mult-row" id="m-1"><span>Standard</span><span>1x</span></div>
+<div class="mult-row" id="m-2"><span>Double</span><span>2x</span></div>
+<div class="mult-row" id="m-3"><span>Triple</span><span>3x</span></div>
+<div class="mult-row" id="m-5"><span>MEGA BOOST</span><span>5x</span></div>
+</div>
+</div>
+</main>
+
+<script>
+let balance = 0;
+let isMuted = false;
+let currentBet = 100;
+let selectedChoice = null;
+
+// Globale Rotationszähler, die fortlaufend aufaddiert werden
+let currentXRotation = -20;
+let currentYRotation = 20;
+
+// socket wird initialisiert und sobald er server update balance schick, wird das gemacht.
+const socket = io(`http://${IP}:3000`, {
+    withCredentials: true,
+    transports: ["websocket"]
+});
+
+socket.on("updateBalance", (newBalance) => {
+    balance = newBalance;
+    updateBalanceDisplay();
+});
+
+const diceRotations = {
+1: { x: 0, y: 0 },
+6: { x: 0, y: 180 },
+3: { x: -90, y: 0 },
+4: { x: 90, y: 0 },
+2: { x: 0, y: -90 },
+5: { x: 0, y: 90 }
+};
+
+function updateBalanceDisplay() {
+document.getElementById("balance").innerText = `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+}
+
+function setBet(amt) {
+document.getElementById("bet-input").value = amt;
+}
+
+function toggleMute() {
+isMuted = !isMuted;
+document.getElementById("mute-btn").innerText = isMuted ? "🔇 MUTED" : "🔊 SOUND ON";
+}
+
+function playTone(freq, type, duration, vol) {
+if (isMuted) return;
+try {
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const osc = audioCtx.createOscillator();
+const gain = audioCtx.createGain();
+osc.type = type;
+osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+osc.start();
+osc.stop(audioCtx.currentTime + duration);
+} catch (e) {}
+}
+
+const sounds = {
+click: () => playTone(400, "sine", 0.05, 0.05),
+roll: () => playTone(150, "triangle", 0.08, 0.04),
+win: () => {
+playTone(523.25, "sine", 0.15, 0.08);
+setTimeout(() => playTone(659.25, "sine", 0.15, 0.08), 100);
+setTimeout(() => playTone(783.99, "sine", 0.3, 0.08), 200);
+},
+lose: () => playTone(180, "sawtooth", 0.3, 0.05)
+};
+
+function selectPrediction(choice) {
+sounds.click();
+selectedChoice = choice;
+document.getElementById("btn-under").className = "game-btn choice-btn" + (choice === 'under' ? " selected" : "");
+document.getElementById("btn-over").className = "game-btn choice-btn" + (choice === 'over' ? " selected" : "");
+document.getElementById("roll-btn").disabled = false;
+document.getElementById("status-text").innerText = "Bereit zum Würfeln!";
+}
+
+function playDice() {
+currentBet = parseFloat(document.getElementById("bet-input").value);
+if (currentBet > balance || currentBet <= 0 || isNaN(currentBet)) {
+alert("Ungültiger Einsatz!");
+return;
+}
+
+socket.emit("updateBalance", (-currentBet));
+
+document.getElementById("roll-btn").disabled = true;
+document.getElementById("btn-under").disabled = true;
+document.getElementById("btn-over").disabled = true;
+document.getElementById("bet-input").disabled = true;
+
+const multRand = Math.random();
+let multiplier = 1;
+if (multRand > 0.92) multiplier = 5;
+else if (multRand > 0.75) multiplier = 3;
+else if (multRand > 0.45) multiplier = 2;
+
+document.querySelectorAll(".mult-row").forEach(el => el.classList.remove("active"));
+document.getElementById(`m-${multiplier}`).classList.add("active");
+
+const rolledNumber = Math.floor(Math.random() * 6) + 1;
+
+let soundCount = 0;
+let rollInterval = setInterval(() => {
+sounds.roll();
+soundCount++;
+if(soundCount > 6) clearInterval(rollInterval);
+}, 150);
+
+const cube = document.getElementById("cube-element");
+const targetRotation = diceRotations[rolledNumber];
+
+// REPARATUR: Wir addieren die neuen Drehungen (mindestens 3 volle Runden = 1080 Grad)
+// auf den vorherigen Rotationsstand auf. Dadurch bricht die Animation niemals ab.
+currentXRotation = (Math.ceil(currentXRotation / 360) * 360) + 1080 + targetRotation.x;
+currentYRotation = (Math.ceil(currentYRotation / 360) * 360) + 1080 + targetRotation.y;
+
+cube.style.transform = `rotateX(${currentXRotation}deg) rotateY(${currentYRotation}deg)`;
+document.getElementById("status-text").innerText = "Der Würfel rotiert...";
+
+setTimeout(() => {
+let isWin = false;
+if (selectedChoice === "under" && rolledNumber <= 3) isWin = true;
+if (selectedChoice === "over" && rolledNumber >= 4) isWin = true;
+
+const textDisplay = document.getElementById("status-text");
+let winAmount = 0;
+
+if (isWin) {
+winAmount = currentBet + (currentBet * multiplier);
+socket.emit("updateBalance", (winAmount));
+sounds.win();
+textDisplay.innerHTML = `<span style="color:var(--primary-green)">Gewonnen! Eine ${rolledNumber}. +$${winAmount.toFixed(2)}</span>`;
+} else {
+sounds.lose();
+textDisplay.innerHTML = `<span style="color:var(--primary-red)">Verloren! Eine ${rolledNumber}.</span>`;
+}
+
+writeHistory(isWin, rolledNumber, winAmount);
+
+document.getElementById("btn-under").disabled = false;
+document.getElementById("btn-over").disabled = false;
+document.getElementById("bet-input").disabled = false;
+document.getElementById("btn-under").className = "game-btn choice-btn";
+document.getElementById("btn-over").className = "game-btn choice-btn";
+selectedChoice = null;
+
+}, 1200);
+}
+
+function writeHistory(isWin, number, winAmt) {
+const history = document.getElementById("history");
+const item = document.createElement("div");
+item.className = "history-item";
+
+if (isWin) {
+item.innerHTML = `<span>Gewürfelt: ${number} (Sieg)</span><span style="color:var(--primary-green)">+$${winAmt.toFixed(2)}</span>`;
+} else {
+item.innerHTML = `<span>Gewürfelt: ${number} (Niederlage)</span><span style="color:var(--primary-red)">-$${currentBet.toFixed(2)}</span>`;
+}
+
+history.prepend(item);
+if (history.children.length > 5) history.removeChild(history.lastChild);
+}
+</script>
+</body>
+</html>

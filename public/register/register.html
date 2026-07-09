@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FD₵ Register</title>
+    <link rel="stylesheet" href="/register/register.css">
+    <script src="register.js" defer></script>
+</head>
+<body>
+<header>
+    <div class="branding">
+        <div class="brand-text">
+            <div class="main-title">FD₵</div>
+            <div class="sub-title">Friedrich-Dessauer-Casino</div>
+        </div>
+    </div>
+</header>
+<main>
+<div class="register-card">
+    <h2 class="title">Register</h2>
+    <form id="register">
+        <input type="text" id="username" placeholder="Username" oninput="updateElements()" required>
+        <input type="password" id="password" placeholder="Password" oninput="updateElements()" required>
+        <input type="password" id="passwordConfirm" placeholder="Confirm Password" oninput="updateElements()" required>
+        <button id="registerButton" type="submit" disabled>Register</button>
+    </form>
+</div>
+</main>
+</body>
+</html>

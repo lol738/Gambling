@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FD₵ Login</title>
+
+    <link rel="stylesheet" href="/login/login.css">
+    <script src="login.js" defer></script>
+</head>
+
+<body>
+
+<header>
+    <div class="branding">
+        <div class="brand-text">
+            <div class="main-title">FD₵</div>
+            <div class="sub-title">Friedrich-Dessauer-Casino</div>
+        </div>
+    </div>
+</header>
+
+<main>
+    <div class="login-card">
+
+        <h2 class="title">Login</h2>
+
+        <form id="login" class="login-form">
+            <input type="text" id="username" name="username" placeholder="Username" oninput="updateElements()" required>
+            <input type="password" id="password" name="password" placeholder="Password" oninput="updateElements()" required>
+            <div class="button-row">
+                <button id="loginButton" type="submit" disabled>Login</button>
+                <a href="/register" class="link">Go to Register</a>
+            </div>
+        </form>
+
+    </div>
+</main>
+
+</body>
+</html>
