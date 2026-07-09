@@ -1,0 +1,173 @@
+/* ============================================================
+   FDC – SHARED THEME
+   Gemeinsamer Look für alle Spiele, abgeleitet aus main.html
+   Einbinden NACH dem spielspezifischen Stylesheet, damit Header/
+   Logo/Hintergrund konsistent überschrieben werden.
+   ============================================================ */
+
+:root {
+    --fdc-green:  #53fc18;
+    --fdc-bg:     #000000;
+    --fdc-card:   #0b0e11;
+    --fdc-border: #1a1c20;
+    --fdc-dim:    #94a3b8;
+    --fdc-red:    #ef4444;
+    --fdc-yellow: #fbbf24;
+}
+
+html, body {
+    background: var(--fdc-bg) !important;
+}
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+#fdc-bg-glow {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse 60% 40% at 15% 55%, rgba(83,252,24,0.04) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 35% at 85% 20%, rgba(83,252,24,0.03) 0%, transparent 70%);
+}
+
+#fdc-particle-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.45;
+}
+
+/* FDC Header – identisch zur Lobby */
+.fdc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 60px;
+    border-bottom: 1px solid rgba(83,252,24,0.12);
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    position: sticky;
+    top: 0;
+    z-index: 200;
+}
+
+.fdc-header-left {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+}
+
+.fdc-back-link {
+    color: var(--fdc-dim);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 8px 14px;
+    border: 1px solid var(--fdc-border);
+    border-radius: 8px;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    white-space: nowrap;
+}
+.fdc-back-link:hover {
+    color: var(--fdc-green);
+    border-color: rgba(83,252,24,0.4);
+    background: rgba(83,252,24,0.06);
+}
+
+.fdc-logo-mark {
+    font-size: 40px;
+    font-weight: 900;
+    letter-spacing: 10px;
+    color: var(--fdc-green);
+    line-height: 1;
+    animation: fdcLogoPulse 3.5s ease-in-out infinite;
+}
+@keyframes fdcLogoPulse {
+    0%,100% { text-shadow: 0 0 25px rgba(83,252,24,0.45), 0 0 55px rgba(83,252,24,0.15); }
+    50%     { text-shadow: 0 0 40px rgba(83,252,24,0.80), 0 0 90px rgba(83,252,24,0.30); }
+}
+
+.fdc-logo-sub {
+    font-size: 9px;
+    color: var(--fdc-green);
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    font-weight: 600;
+    margin-top: 3px;
+    opacity: 0.75;
+}
+
+.fdc-balance-box {
+    background: var(--fdc-card);
+    border: 1px solid rgba(83,252,24,0.2);
+    border-radius: 10px;
+    padding: 10px 22px;
+    text-align: right;
+    transition: border-color 0.3s;
+}
+.fdc-balance-box:hover { border-color: rgba(83,252,24,0.5); }
+.fdc-balance-label {
+    font-size: 10px;
+    color: var(--fdc-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+.fdc-balance-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--fdc-green);
+    font-variant-numeric: tabular-nums;
+}
+
+.fdc-page-title {
+    text-align: center;
+    padding: 40px 20px 8px;
+    position: relative;
+    z-index: 1;
+}
+.fdc-page-eyebrow {
+    font-size: 11px;
+    color: var(--fdc-green);
+    text-transform: uppercase;
+    letter-spacing: 6px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    opacity: 0.75;
+}
+.fdc-page-heading {
+    font-size: clamp(30px, 5vw, 48px);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    background: linear-gradient(120deg, #fff 20%, var(--fdc-green) 50%, #fff 80%);
+    background-size: 250% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: fdcShimmer 5s linear infinite;
+}
+@keyframes fdcShimmer {
+    0%   { background-position: 250% center; }
+    100% { background-position: -250% center; }
+}
+
+.fdc-footer {
+    border-top: 1px solid var(--fdc-border);
+    padding: 22px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+.fdc-footer-logo { font-size: 20px; font-weight: 900; letter-spacing: 7px; color: var(--fdc-green); opacity: 0.35; }
+.fdc-footer-text { font-size: 11px; color: var(--fdc-dim); opacity: 0.6; }
+
+/* Alles was Content ist, über die Hintergrund-Effekte legen */
+.fdc-content { position: relative; z-index: 1; }

@@ -6,19 +6,17 @@
     <title>FDC - Friedrich-Dessauer-Casino</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <link rel="stylesheet" href="/plinkoball/plinkoball.css">
+    <link rel="stylesheet" href="/fdc-theme.css">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="/IP.js"></script>
   </head>
   <body>
+    <div id="fdc-bg-glow"></div>
+    <canvas id="fdc-particle-canvas"></canvas>
     <header>
       <div class="branding">
-        <img
-          src="C:\Users\TLind\Downloads\Schule\schizo\FDC_gambling\root\frontend\src\views\Games\plinko\IMG-20260507-WA0001.jpg"
-          alt="FDC Logo"
-          class="logo-img"
-        />
         <div class="brand-text">
-          <div class="main-title">FD₵</div>
+                <div class="main-title" onclick="window.location.href='/main'">FD₵</div>
           <div class="sub-title">Friedrich-Dessauer-Casino</div>
         </div>
       </div>
@@ -102,6 +100,7 @@
       </div>
     </main>
 
+    <script src="/fdc-theme.js"></script>
     <script src="/plinkoball/plinkoball.js"></script>
   </body>
 </html>
