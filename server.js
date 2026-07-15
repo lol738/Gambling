@@ -196,5 +196,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(port, () => {
-    console.log(`Server running at http://${ip.IP}:${port}`);
+    console.log(`Server running at http://${ip}:${port}`);
 });
