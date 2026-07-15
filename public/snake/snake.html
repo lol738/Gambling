@@ -1,30 +1,86 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake & Stake</title>
-    <link rel="stylesheet" href="/snake/snake.css">
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="/IP.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FDC - Snake & Stake</title>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="/IP.js"></script>
+<link rel="stylesheet" href="/fdc-theme.css">
+<link rel="stylesheet" href="/snake/snake.css">
 </head>
 <body>
-    <div class="game-container">
-        <div class="header">
-            <h1>SNAKE <span class="gold">&</span> STAKE</h1>
-            <div class="stats">
-                <div class="stat-box">Multiplier: <span id="multiplier">1.0</span>x</div>
-                <div class="stat-box gold">Potential: $<span id="payout">0</span></div>
-            </div>
-        </div>
-        
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-        
-        <div class="instructions">
-            <p>Eat to grow the multiplier. Reach the <span class="exit-text">GOLDEN EXIT</span> to cash out!</p>
-            <button id="startBtn">Start New Run ($10)</button>
-        </div>
+
+<div id="fdc-bg-glow"></div>
+<canvas id="fdc-particle-canvas"></canvas>
+
+<!-- ============================================================
+     HEADER – identisch mit allen anderen FDC Spielen
+     ============================================================ -->
+<header>
+    <div>
+        <div class="logo-mark" onclick="window.location.href='/main'">FD₵</div>
+        <div class="logo-sub">Friedrich-Dessauer-Casino</div>
     </div>
-    <script src="/snake/snake.js"></script>
+    <button class="mute-toggle" onclick="toggleMute()" id="mute-btn">
+        🔊 SOUND ON
+    </button>
+</header>
+
+<main>
+  <div id="game-container">
+
+    <!-- ====================================================
+         LINKES PANEL – Steuerung (gleicher Aufbau wie Ice Field / Chicken)
+         ==================================================== -->
+    <div id="ui-panel">
+
+      <div class="stat-box">
+        <div class="stat-label">Guthaben</div>
+        <div id="balance" class="value">$0.00</div>
+      </div>
+
+      <!-- Einsatz-Eingabe -->
+      <div>
+        <input type="number" id="bet-input" value="100" min="1" />
+        <div class="quick-bets">
+          <button class="qb" onclick="setBet(10)">$10</button>
+          <button class="qb" onclick="setBet(50)">$50</button>
+          <button class="qb" onclick="setBet(100)">$100</button>
+        </div>
+      </div>
+
+      <div class="stats">
+          <div class="stat-box">
+              <div class="stat-label">Multiplier</div>
+              <div class="value" id="multiplier">1.00x</div>
+          </div>
+          <div class="stat-box gold" id="payout-box">
+              <div class="stat-label">Potential</div>
+              <div class="value" id="payout">$0.00</div>
+          </div>
+      </div>
+
+      <button class="game-btn" id="startBtn">Start Run</button>
+
+      <div class="instructions">
+        <p>Friss Punkte, steigere den Multiplikator. Erreiche den <span class="exit-text">GOLDENEN EXIT</span> um auszuzahlen!</p>
+      </div>
+
+      <div id="history"></div>
+    </div>
+
+    <!-- ====================================================
+         MITTLERES PANEL – Canvas
+         ==================================================== -->
+    <div id="canvas-wrapper">
+      <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
+
+  </div>
+</main>
+
+<script src="/fdc-theme.js"></script>
+<script src="/snake/snake.js"></script>
 </body>
 </html>
