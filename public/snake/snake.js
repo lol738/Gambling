@@ -97,7 +97,7 @@ function draw() {
     // Snake
     ctx.shadowBlur = 0;
     snake.forEach((part, index) => {
-        ctx.fillStyle = index === 0 ? "#4ade80" : "#166534";
+        ctx.fillStyle = index === 0 ? "#53fc18" : "#1a6e08";
         ctx.beginPath();
         ctx.roundRect(part.x * gridSize + 1, part.y * gridSize + 1, gridSize - 2, gridSize - 2, 6);
         ctx.fill();
