@@ -476,8 +476,6 @@ if(soundCount > 6) clearInterval(rollInterval);
 const cube = document.getElementById("cube-element");
 const targetRotation = diceRotations[rolledNumber];
 
-// REPARATUR: Wir addieren die neuen Drehungen (mindestens 3 volle Runden = 1080 Grad)
-// auf den vorherigen Rotationsstand auf. Dadurch bricht die Animation niemals ab.
 currentXRotation = (Math.ceil(currentXRotation / 360) * 360) + 1080 + targetRotation.x;
 currentYRotation = (Math.ceil(currentYRotation / 360) * 360) + 1080 + targetRotation.y;
 

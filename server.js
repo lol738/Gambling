@@ -144,7 +144,7 @@ app.post("/login", (req, res) => {
     });
 });
 
-app.post("/logout", (req, res) => {
+app.get("/logout", (req, res) => {
     req.session.destroy((err) => {
         if (err) {
             console.error("Logout error:", err);
