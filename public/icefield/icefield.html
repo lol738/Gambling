@@ -646,7 +646,7 @@ function getMult(k) {
   // (jedes Feld verringert sowohl "safe" als auch "total" um 1, weil
   // es nicht mit Zurücklegen gezogen wird)
   for (let i = 0; i < k; i++) p *= (safe - i) / (TOTAL - i);
-  return (1 / p) * 0.97; // Kehrwert der Wahrscheinlichkeit, mit House Edge
+  return (1 / p) * 0.60; // Kehrwert der Wahrscheinlichkeit, mit House Edge
 }
 
 // ── Multiplikatoren-Tabelle aufbauen ────────────────────────────

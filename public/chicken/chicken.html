@@ -404,7 +404,7 @@ canvas { display: block; }
 
 // ── Spielkonfiguration (die "Stellschrauben" des Spiels) ────────
 const LANES       = 10;    // Anzahl Fahrspuren auf der Straße
-const DANGER_PROB = 0.30;  // 30% Sterberisiko PRO SPUR (unabhängig voneinander)
+const DANGER_PROB = 0.40;  // 30% Sterberisiko PRO SPUR (unabhängig voneinander)
 
 // ── Multiplikator-Formel ─────────────────────────────────────────
 //
@@ -433,7 +433,7 @@ const DANGER_PROB = 0.30;  // 30% Sterberisiko PRO SPUR (unabhängig voneinander
 //    k=5:  0.97 / 0.70^5 ≈ 5.77x
 //    k=10: 0.97 / 0.70^10 ≈ 34.3x  (alle 10 Spuren geschafft!)
 function getLaneMult(k) {
-  return 0.97 / Math.pow(0.70, k);
+  return 0.93 / Math.pow(0.60, k);
 }
 
 // ── Canvas-Setup ──────────────────────────────────────────────────
