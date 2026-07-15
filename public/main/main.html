@@ -5,357 +5,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FDC – Friedrich-Dessauer-Casino</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="main.css">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link rel="stylesheet" href="/fdc-theme.css">
     <script src="/IP.js"></script>
-    <style>
-        /* ==========================================================
-           FDC LOBBY – Inline Styles
-           Falls styles.css eigene Regeln hat, diese hier ergänzen
-           oder mit !important überschreiben.
-           ========================================================== */
-        :root {
-            --green:  #53fc18;
-            --bg:     #000000;
-            --card:   #0b0e11;
-            --border: #1a1c20;
-            --dim:    #94a3b8;
-            --red:    #ef4444;
-            --yellow: #fbbf24;
-        }
-
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            background: var(--bg);
-            color: #fff;
-            font-family: 'Inter', system-ui, sans-serif;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* Subtiler Hintergrund-Glow (reagiert auf Mausbewegung per JS) */
-        #bg-glow {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 0;
-            /* Basis-Glow – wird per JS durch Mouse-Tracking ergänzt */
-            background:
-                radial-gradient(ellipse 60% 40% at 15% 55%, rgba(83,252,24,0.04) 0%, transparent 70%),
-                radial-gradient(ellipse 50% 35% at 85% 20%, rgba(83,252,24,0.03) 0%, transparent 70%);
-        }
-
-        /* Partikel-Canvas (floating green sparks im Hintergrund) */
-        #particle-canvas {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 0;
-            opacity: 0.45;
-        }
-
-        /* Alle sichtbaren Inhalte über den BG-Effekten */
-        header, .hero, .ticker-wrapper, main, footer {
-            position: relative;
-            z-index: 1;
-        }
-
-        /* ── HEADER ──────────────────────────────────────────────── */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 18px 60px;
-            border-bottom: 1px solid rgba(83,252,24,0.12);
-            background: rgba(0,0,0,0.75);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            position: sticky;
-            top: 0;
-            z-index: 200;
-        }
-
-        .logo-mark {
-            font-size: 52px;
-            font-weight: 900;
-            letter-spacing: 14px;
-            color: var(--green);
-            line-height: 1;
-            /* Grüner Glow pulsiert sanft */
-            animation: logoPulse 3.5s ease-in-out infinite;
-        }
-        @keyframes logoPulse {
-            0%,100% { text-shadow: 0 0 25px rgba(83,252,24,0.45), 0 0 55px rgba(83,252,24,0.15); }
-            50%     { text-shadow: 0 0 40px rgba(83,252,24,0.80), 0 0 90px rgba(83,252,24,0.30); }
-        }
-
-        .logo-sub {
-            font-size: 10px;
-            color: var(--green);
-            text-transform: uppercase;
-            letter-spacing: 6px;
-            font-weight: 600;
-            margin-top: 4px;
-            opacity: 0.75;
-        }
-
-        /* Balance-Anzeige oben rechts */
-        .balance-box {
-            background: var(--card);
-            border: 1px solid rgba(83,252,24,0.2);
-            border-radius: 10px;
-            padding: 10px 22px;
-            text-align: right;
-            transition: border-color 0.3s;
-        }
-        .balance-box:hover { border-color: rgba(83,252,24,0.5); }
-        .balance-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; }
-        .balance-value {
-            font-size: 22px;
-            font-weight: 800;
-            color: var(--green);
-            font-variant-numeric: tabular-nums;
-            /* Kurzes Aufleuchten wenn Balance sich ändert */
-            transition: color 0.3s;
-        }
-
-        /* ── HERO ────────────────────────────────────────────────── */
-        .hero {
-            text-align: center;
-            padding: 64px 20px 44px;
-        }
-
-        .hero-eyebrow {
-            font-size: 11px;
-            color: var(--green);
-            text-transform: uppercase;
-            letter-spacing: 6px;
-            font-weight: 700;
-            margin-bottom: 18px;
-            opacity: 0.75;
-        }
-
-        .hero-title {
-            font-size: clamp(38px, 6vw, 64px);
-            font-weight: 900;
-            line-height: 1.1;
-            letter-spacing: -1.5px;
-            /* Schimmernder Gradient-Text */
-            background: linear-gradient(120deg, #fff 20%, var(--green) 50%, #fff 80%);
-            background-size: 250% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmer 5s linear infinite;
-        }
-        @keyframes shimmer {
-            0%   { background-position: 250% center; }
-            100% { background-position: -250% center; }
-        }
-
-        .hero-sub {
-            font-size: 16px;
-            color: var(--dim);
-            margin-top: 16px;
-            font-weight: 400;
-            letter-spacing: 0.2px;
-        }
-
-        /* ── LIVE TICKER ─────────────────────────────────────────── */
-        .ticker-wrapper {
-            overflow: hidden;
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-            padding: 11px 0;
-            background: rgba(83,252,24,0.025);
-            margin-bottom: 52px;
-        }
-        .ticker {
-            display: flex;
-            gap: 70px;
-            /* Breite des Inhalts × 2 (doppelt für nahtloses Loop) */
-            animation: tickerScroll 30s linear infinite;
-            white-space: nowrap;
-        }
-        .ticker-item {
-            font-size: 12px;
-            color: var(--dim);
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-        .ticker-item .win  { color: var(--green); font-weight: 700; }
-        .ticker-item .name { color: #fff; }
-        @keyframes tickerScroll {
-            0%   { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-
-        /* ── GAMES GRID ──────────────────────────────────────────── */
-        .lobby {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 40px 72px;
-        }
-
-        .section-label {
-            font-size: 11px;
-            color: var(--green);
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            font-weight: 700;
-            margin-bottom: 24px;
-        }
-
-        /*
-         * GAME CARDS – modular erweiterbar
-         * Neues Spiel hinzufügen:
-         *   <a class="game-card" href="/main/dein-spiel-route">
-         *     <span class="game-icon">🎮</span>
-         *     <div class="game-name">Spielname</div>
-         *     <div class="game-desc">Kurze Beschreibung</div>
-         *     <span class="play-btn">Spielen →</span>
-         *   </a>
-         */
-        .games-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 16px;
-        }
-
-        .game-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 28px 24px 22px;
-            text-decoration: none;
-            color: #fff;
-            display: block;
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.2s ease, border-color 0.25s, box-shadow 0.25s;
-        }
-
-        /* Licht-Sweep beim Hover (schimmernder Glanzstrahl) */
-        .game-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: -80%;
-            width: 50%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(83,252,24,0.07), transparent);
-            transform: skewX(-12deg);
-            transition: left 0.55s ease;
-            pointer-events: none;
-        }
-        .game-card:hover::before { left: 180%; }
-
-        .game-card:hover {
-            border-color: rgba(83,252,24,0.4);
-            box-shadow: 0 0 35px rgba(83,252,24,0.09), 0 10px 40px rgba(0,0,0,0.5);
-            transform: translateY(-4px);
-        }
-
-        .game-icon { font-size: 40px; display: block; margin-bottom: 16px; }
-        .game-name { font-size: 18px; font-weight: 800; margin-bottom: 7px; letter-spacing: -0.3px; }
-        .game-desc { font-size: 13px; color: var(--dim); line-height: 1.55; }
-
-        /* Badge oben rechts auf der Karte */
-        .badge {
-            position: absolute;
-            top: 16px; right: 16px;
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 4px 10px;
-            border-radius: 20px;
-        }
-        .badge-new  { background: rgba(83,252,24,0.12);  color: var(--green); }
-        .badge-hot  { background: rgba(239,68,68,0.12);  color: var(--red);    }
-        .badge-gold { background: rgba(251,191,36,0.12); color: var(--yellow); }
-
-        /* "Spielen →"-Button am unteren Rand der Karte */
-        .play-btn {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 9px 20px;
-            background: rgba(83,252,24,0.08);
-            border: 1px solid rgba(83,252,24,0.18);
-            border-radius: 7px;
-            color: var(--green);
-            font-size: 12px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            transition: background 0.2s, border-color 0.2s;
-        }
-        .game-card:hover .play-btn {
-            background: rgba(83,252,24,0.18);
-            border-color: rgba(83,252,24,0.5);
-        }
-
-        /* ── FOOTER ──────────────────────────────────────────────── */
-        footer {
-            border-top: 1px solid var(--border);
-            padding: 22px 60px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: relative;
-            z-index: 1;
-        }
-        .footer-logo { font-size: 24px; font-weight: 900; letter-spacing: 8px; color: var(--green); opacity: 0.35; }
-        .footer-text { font-size: 12px; color: var(--dim); opacity: 0.6; }
-    </style>
 </head>
 
 <body>
+    <div id="fdc-bg-glow"></div>
+    <canvas id="fdc-particle-canvas"></canvas>
 
-    <!-- Hintergrund-Effekte (werden per JS befüllt) -->
-    <div id="bg-glow"></div>
-    <canvas id="particle-canvas"></canvas>
-
-    <!-- ============================================================
-         HEADER
-         ============================================================ -->
-    <header>
+    <header id="fdc-header">
         <div>
             <div class="logo-mark">FD₵</div>
             <div class="logo-sub">Friedrich-Dessauer-Casino</div>
         </div>
-        <!-- Balance wird aus localStorage geladen (wird von allen Spielen dort gespeichert) -->
         <div class="balance-box">
             <div class="balance-label">Guthaben</div>
-            <div class="balance-value" id="balance-display">$10,000.00</div>
+            <div class="balance-value" id="balance-display"></div>
         </div>
     </header>
 
-    <!-- ============================================================
-         HERO
-         ============================================================ -->
     <div class="hero">
         <div class="hero-eyebrow">Friedrich-Dessauer-Casino</div>
         <div class="hero-title">Dein Glück wartet.</div>
         <div class="hero-sub">Wähle dein Spiel — und setz alles auf eine Karte.</div>
     </div>
 
-    <!-- Live-Ticker mit simulierten Gewinnen -->
     <div class="ticker-wrapper">
         <div class="ticker" id="ticker"></div>
     </div>
 
-    <!-- ============================================================
-         GAME LOBBY
-         ============================================================
-         MODULAR: Neues Spiel = neues <a class="game-card" href="...">
-         ============================================================ -->
     <main class="lobby">
         <div class="section-label">Alle Spiele</div>
 
         <div class="games-grid">
 
-            <!-- PLINKO -->
             <a class="game-card" href="/main/plinkoball">
                 <span class="badge badge-hot">HOT</span>
                 <span class="game-icon">⚪</span>
@@ -364,7 +49,6 @@
                 <span class="play-btn">Spielen →</span>
             </a>
 
-            <!-- WÜRFEL -->
             <a class="game-card" href="/main/würfel">
                 <span class="game-icon">🎲</span>
                 <div class="game-name">Cyber Dice</div>
@@ -372,7 +56,6 @@
                 <span class="play-btn">Spielen →</span>
             </a>
 
-            <!-- SNAKE & STAKE -->
             <a class="game-card" href="/main/snake">
                 <span class="game-icon">🐍</span>
                 <div class="game-name">Snake & Stake</div>
@@ -380,7 +63,6 @@
                 <span class="play-btn">Spielen →</span>
             </a>
 
-            <!-- RUBELLOSE -->
             <a class="game-card" href="/main/lose">
                 <span class="game-icon">🃏</span>
                 <div class="game-name">Rubellose</div>
@@ -388,7 +70,6 @@
                 <span class="play-btn">Spielen →</span>
             </a>
 
-            <!-- CHICKEN GAME -->
             <a class="game-card" href="/main/chicken">
                 <span class="badge badge-new">NEU</span>
                 <span class="game-icon">🐔</span>
@@ -397,7 +78,6 @@
                 <span class="play-btn">Spielen →</span>
             </a>
 
-            <!-- ICE FIELD -->
             <a class="game-card" href="/main/icefield">
                 <span class="badge badge-new">NEU</span>
                 <span class="game-icon">❄️</span>
@@ -406,140 +86,10 @@
                 <span class="play-btn">Spielen →</span>
             </a>
 
-            <!--
-                ═══════════════════════════════════════════════
-                NEUES SPIEL HINZUFÜGEN – Template:
-
-                <a class="game-card" href="/main/dein-route">
-                    <span class="badge badge-new">NEU</span>
-                    <span class="game-icon">🎮</span>
-                    <div class="game-name">Spielname</div>
-                    <div class="game-desc">Kurze Beschreibung des Spiels.</div>
-                    <span class="play-btn">Spielen →</span>
-                </a>
-                ═══════════════════════════════════════════════
-            -->
-
         </div>
     </main>
-
-    <!-- ============================================================
-         FOOTER
-         ============================================================ -->
-    <footer>
-        <div class="footer-logo">FD₵</div>
-        <div class="footer-text">Friedrich-Dessauer-Casino · Nur Spielgeld · Schulprojekt FDG Aschaffenburg</div>
-    </footer>
-
-    <!-- Vorhandenes Backend-Script (nicht anfassen) -->
     <script src="main.js"></script>
-
-    <script>
-        // ============================================================
-        //  FDC LOBBY – Frontend Script
-        // ============================================================
-
-        // ── Balance aus localStorage laden ───────────────────────────
-        // Alle Spiele speichern den Kontostand unter 'fdc_balance'.
-        // Die Lobby liest ihn von dort und zeigt ihn an.
-        function loadBalance(bal) {
-            document.getElementById('balance-display').textContent =
-                '$' + bal.toLocaleString('en-US', { minimumFractionDigits: 2 });
-        }
-        
-        // socket wird initialisiert und sobald er server update balance schick, wird das gemacht.
-        const socket = io(`http://${IP}:3000`, {
-            withCredentials: true,
-            transports: ["websocket"]
-        });
-
-        socket.on("updateBalance", (newBalance) => {
-            balance = newBalance;
-            loadBalance(balance);
-        });
-
-        // ── Live-Ticker befüllen ─────────────────────────────────────
-        // Simulierte Gewinne. Doppelt eingefügt für nahtloses Looping.
-        const TICKER_EVENTS = [
-            { name: 'M***x', game: 'Plinko',       win: '+$420.00'   },
-            { name: 'K***l', game: 'Ice Field',     win: '+$1,337.00' },
-            { name: 'T***s', game: 'Chicken Game',  win: '+$850.00'   },
-            { name: 'L***a', game: 'Cyber Dice',    win: '+$2,000.00' },
-            { name: 'J***n', game: 'Snake & Stake', win: '+$175.50'   },
-            { name: 'A***e', game: 'Rubellose',     win: '+$5,000.00' },
-            { name: 'F***k', game: 'Münzwurf',      win: '+$600.00'   },
-            { name: 'S***h', game: 'Plinko',        win: '+$3,200.00' },
-        ];
-
-        const ticker = document.getElementById('ticker');
-        // 2× einfügen damit das CSS-Scroll nahtlos von vorne beginnen kann
-        [0, 1].forEach(() => {
-            TICKER_EVENTS.forEach(ev => {
-                const el = document.createElement('div');
-                el.className = 'ticker-item';
-                el.innerHTML = `🏆 <span class="name">${ev.name}</span> hat <span class="win">${ev.win}</span> bei ${ev.game} gewonnen`;
-                ticker.appendChild(el);
-            });
-        });
-
-        // ── Schwebende Partikel im Hintergrund ───────────────────────
-        // Kleine grüne Punkte steigen langsam auf (Casino-Atmosphäre)
-        const canvas  = document.getElementById('particle-canvas');
-        const ctx     = canvas.getContext('2d');
-
-        function resizeCanvas() {
-            canvas.width  = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        window.addEventListener("pageshow", function (event) {
-            socket.emit("updateBalance", (0));
-        });
-
-        // 45 Partikel mit zufälligen Startpositionen & Geschwindigkeiten
-        const particles = Array.from({ length: 45 }, () => ({
-            x:       Math.random() * window.innerWidth,
-            y:       Math.random() * window.innerHeight,
-            r:       Math.random() * 1.8 + 0.4,   // Radius
-            speed:   Math.random() * 0.25 + 0.08, // Aufstiegsgeschwindigkeit
-            opacity: Math.random() * 0.45 + 0.08, // Transparenz
-            drift:   (Math.random() - 0.5) * 0.2  // Seitliche Drift
-        }));
-
-        function animateParticles() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => {
-                // Partikel steigt auf und driftet leicht seitwärts
-                p.y -= p.speed;
-                p.x += p.drift;
-                // Wenn oben aus dem Bild: von unten wieder einblenden
-                if (p.y < -5) {
-                    p.y = canvas.height + 5;
-                    p.x = Math.random() * canvas.width;
-                }
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(83,252,24,${p.opacity})`;
-                ctx.fill();
-            });
-            requestAnimationFrame(animateParticles);
-        }
-        animateParticles();
-
-        // ── Subtiler Maus-Glow im Hintergrund ────────────────────────
-        // Ein grüner Schimmer folgt dem Mauszeiger sehr dezent
-        const bgGlow = document.getElementById('bg-glow');
-        document.addEventListener('mousemove', e => {
-            const xPct = (e.clientX / window.innerWidth  * 100).toFixed(1);
-            const yPct = (e.clientY / window.innerHeight * 100).toFixed(1);
-            bgGlow.style.background = `
-                radial-gradient(ellipse 55% 45% at ${xPct}% ${yPct}%, rgba(83,252,24,0.04) 0%, transparent 65%),
-                radial-gradient(ellipse 40% 30% at 15% 55%, rgba(83,252,24,0.025) 0%, transparent 70%)
-            `;
-        });
-    </script>
+    <script src="/fdc-theme.js"></script>
 
 </body>
 </html>

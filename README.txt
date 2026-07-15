@@ -26,10 +26,29 @@ socket.on("updateBalance", (newBalance) => {
 
 socket.emit("updateBalance", (Wert));
 
-5. Damit alles ein einheitliches Design hat, macht bitte alle denselben header
-
-
 Wobei Wert durch den wert verändert wird, umden ihr sonst balance verändert hättet. (also negativ wenn abgezogen wird) Dann
 müsst ihr auch die sonstige Operation an Balance löschen. (also wenn da z.B. balance -= wert steht, dann löscht ihr das, das 
 wird schon bei socket.on("balanceUpdate") gemacht.
+
+5. Damit alles ein einheitliches Design hat, macht bitte alle denselben header
+
+<div id="fdc-bg-glow"></div>
+<canvas id="fdc-particle-canvas"></canvas>
+<header>
+    <div>
+        <div class="logo-mark" onclick="window.location.href='/main'">FD₵</div>
+        <div class="logo-sub">Friedrich-Dessauer-Casino</div>
+    </div>
+    <button class="mute-toggle" onclick="toggleMute()" id="mute-btn">
+        🔊 SOUND ON
+    </button>
+</header>
+
+dafür müsst ihr auch die dateien fdc-theme.js und .css importieren
+
+<link rel="stylesheet" href="/fdc-theme.css">
+
+Und:
+
+<script src="/fdc-theme.js"></script>
 

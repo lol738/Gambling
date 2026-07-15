@@ -44,7 +44,7 @@
                 const x = e.clientX / window.innerWidth * 100;
                 const y = e.clientY / window.innerHeight * 100;
                 bgGlow.style.background = `
-                    radial-gradient(ellipse 55% 45% at ${x}% ${y}%, rgba(83,252,24,0.07) 0%, transparent 70%)
+                    radial-gradient(ellipse 55% 45% at ${x}% ${y}%, rgba(83,252,24,0.1) 0%, transparent 70%)
                 `;
             });
         }

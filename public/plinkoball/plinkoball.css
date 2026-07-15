@@ -18,35 +18,7 @@
         overflow: hidden;
       }
 
-      header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 20px 50px;
-        background: var(--bg-color);
-        border-bottom: 1px solid #111;
-      }
-
-      .branding {
-        display: flex;
-        align-items: center;
-        gap: 25px;
-      }
-      .brand-text {
-        display: flex;
-        flex-direction: column;
-        min-width: 320px;
-      }
-      .main-title {
-        font-size: 52px;
-        font-weight: 900;
-        line-height: 0.9;
-        letter-spacing: 14px;
-        color: var(--primary-green);
-        margin: 0;
-        animation: fdcLogoPulse 3.5s ease-in-out infinite;
-        cursor: pointer;
-      }
+      
       header { position: relative; z-index: 1; }
       main { position: relative; z-index: 1; }
       .fdc-back-btn {
