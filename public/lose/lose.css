@@ -39,13 +39,28 @@ flex-direction: column;
 min-width: 320px;
 }
 .main-title {
-font-size: 72px;
+font-size: 52px;
 font-weight: 900;
 line-height: 0.9;
-letter-spacing: 30px;
+letter-spacing: 14px;
 color: var(--primary-green);
 margin: 0;
+animation: fdcLogoPulse 3.5s ease-in-out infinite;
+cursor: pointer;
 }
+header { position: relative; z-index: 1; }
+main { position: relative; z-index: 1; }
+.fdc-back-btn {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: 0.2s;
+}
+.fdc-back-btn:hover { color: var(--primary-green); border-color: rgba(83,252,24,0.4); background: rgba(83,252,24,0.06); }
 
 .sub-title {
 font-size: 13.5px;

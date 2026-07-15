@@ -6,6 +6,7 @@
 <title>FDC - Würfel</title>
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script src="/IP.js"></script>
+<link rel="stylesheet" href="/fdc-theme.css">
 <style>
 :root {
 --bg-color: #000000;
@@ -49,13 +50,29 @@ flex-direction: column;
 min-width: 320px;
 }
 .main-title {
-font-size: 72px;
+font-size: 52px;
 font-weight: 900;
 line-height: 0.9;
-letter-spacing: 30px;
+letter-spacing: 14px;
 color: var(--primary-green);
 margin: 0;
+animation: fdcLogoPulse 3.5s ease-in-out infinite;
+cursor: pointer;
 }
+header { position: relative; z-index: 1; }
+main { position: relative; z-index: 1; }
+.fdc-back-btn {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: 0.2s;
+  margin-right: 14px;
+}
+.fdc-back-btn:hover { color: var(--primary-green); border-color: rgba(83,252,24,0.4); background: rgba(83,252,24,0.06); }
 
 .sub-title {
 font-size: 13.5px;
@@ -281,10 +298,12 @@ cursor: pointer;
 </style>
 </head>
 <body>
+<div id="fdc-bg-glow"></div>
+<canvas id="fdc-particle-canvas"></canvas>
 <header>
 <div class="branding">
 <div class="brand-text">
-<div class="main-title">FD₵</div>
+<div class="main-title" onclick="window.location.href='/main'">FD₵</div>
 <div class="sub-title">Friedrich-Dessauer-Casino</div>
 </div>
 </div>
@@ -343,6 +362,7 @@ cursor: pointer;
 </div>
 </main>
 
+<script src="/fdc-theme.js"></script>
 <script>
 let balance = 0;
 let isMuted = false;

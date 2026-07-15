@@ -1,5 +1,5 @@
 Um das alles uz nutzen braucht man node.js und die module, die alle in der serder.js datei am anfang aufgelistet sind. 
-Zum instalieren eines der module macht man einfach npm install "Modulname". zum ausführen von all dem node server.js 
+Zum instalieren der module macht man einfach npm install . zum ausführen von all dem node server.js 
 im ordner Gambilng.
 
 was noch fehltist dass eure spiele eingebunden werden, das ist recht simpel:
@@ -26,8 +26,10 @@ socket.on("updateBalance", (newBalance) => {
 
 socket.emit("updateBalance", (Wert));
 
+5. Damit alles ein einheitliches Design hat, macht bitte alle denselben header
+
+
 Wobei Wert durch den wert verändert wird, umden ihr sonst balance verändert hättet. (also negativ wenn abgezogen wird) Dann
 müsst ihr auch die sonstige Operation an Balance löschen. (also wenn da z.B. balance -= wert steht, dann löscht ihr das, das 
 wird schon bei socket.on("balanceUpdate") gemacht.
 
-Wer noch bock hat kann ne schöne homepage machen.

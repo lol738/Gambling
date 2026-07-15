@@ -1,7 +1,3 @@
-// ============================================================
-//  FDC – SHARED BACKGROUND FX
-//  Partikel-Canvas + Maus-Glow, identisch zur Lobby (main.html)
-// ============================================================
 (function () {
     function init() {
         const canvas = document.getElementById('fdc-particle-canvas');
@@ -16,12 +12,12 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        const particles = Array.from({ length: 45 }, () => ({
+        const particles = Array.from({ length: 90 }, () => ({
             x: Math.random() * window.innerWidth,
             y: Math.random() * window.innerHeight,
-            r: Math.random() * 1.8 + 0.4,
+            r: Math.random() * 2.8 + 0.8,
             speed: Math.random() * 0.25 + 0.08,
-            opacity: Math.random() * 0.45 + 0.08,
+            opacity: Math.random() * 0.45 + 0.5,
             drift: (Math.random() - 0.5) * 0.2
         }));
 
@@ -45,11 +41,10 @@
 
         if (bgGlow) {
             document.addEventListener('mousemove', e => {
-                const xPct = (e.clientX / window.innerWidth * 100).toFixed(1);
-                const yPct = (e.clientY / window.innerHeight * 100).toFixed(1);
+                const x = e.clientX / window.innerWidth * 100;
+                const y = e.clientY / window.innerHeight * 100;
                 bgGlow.style.background = `
-                    radial-gradient(ellipse 55% 45% at ${xPct}% ${yPct}%, rgba(83,252,24,0.04) 0%, transparent 65%),
-                    radial-gradient(ellipse 40% 30% at 15% 55%, rgba(83,252,24,0.025) 0%, transparent 70%)
+                    radial-gradient(ellipse 55% 45% at ${x}% ${y}%, rgba(83,252,24,0.07) 0%, transparent 70%)
                 `;
             });
         }

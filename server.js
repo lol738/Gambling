@@ -1,3 +1,4 @@
+const ip = require("./public/IP.js");
 const express = require("express");
 const http = require("http");
 const path = require("path");
@@ -8,7 +9,6 @@ const sharedSession = require("express-socket.io-session");
 
 const app = express();
 const server = http.createServer(app);
-const ip = "10.2.63.92";
 const port = 3000;
 const io = socketIo(server);
 
@@ -196,5 +196,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(port, () => {
-    console.log(`Server running at http://${ip}:${port}`);
+    console.log(`Server running at http://${ip.IP}:${port}`);
 });
