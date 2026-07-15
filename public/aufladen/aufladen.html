@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geld Aufladen</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link rel="stylesheet" href="/fdc-theme.css">
+    <link rel="stylesheet" href="/aufladen/aufladen.css">
+    <script src="/IP.js"></script>
+</head>
+
+<body>
+    <div id="fdc-bg-glow"></div>
+    <canvas id="fdc-particle-canvas"></canvas>
+
+    <header>
+        <div>
+            <div class="logo-mark" onclick="window.location.href='/main'">FD₵</div>
+            <div class="logo-sub">Friedrich-Dessauer-Casino</div>
+        </div>
+        <a class="logout-btn" href="/logout">logout</a>
+    </header>
+
+    <div id="charge" class="charge-form">
+        <div class="balance-box">
+            <div class="balance-label">Guthaben</div>
+            <div class="balance-value" id="balance-display"></div>
+        </div>
+        <input type="text" id="amount" name="username" placeholder="Wert" oninput="updateElements()">
+        <button id="chargeButton">Aufladen</button>
+    </div>
+    <script src="/aufladen/aufladen.js"></script>
+    <script src="/fdc-theme.js"></script>
+</body>
+</html>
+

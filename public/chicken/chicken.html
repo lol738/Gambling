@@ -338,34 +338,15 @@ canvas { display: block; }
 
 <script src="/fdc-theme.js"></script>
 <script>
-// ================================================================
-//  THE CHICKEN GAME – Spiellogik
-//
-//  Inspiriert von "Chicken Road":
-//  - Eine Straße mit 10 Fahrspuren (Lanes)
-//  - Jede Spur hat 30% Chance, gefährlich zu sein (Auto kommt!)
-//  - Vor Spielbeginn wird für jede Spur zufällig festgelegt ob
-//    sie sicher ist oder nicht (House-seitig vorherbestimmt)
-//  - Der Spieler überquert Spur für Spur und kann nach jeder
-//    sicheren Überquerung "Cash Out" drücken
-//  - Erwischt ein Auto das Huhn, verliert der Spieler alles
-//
-//  Multiplikator nach k erfolgreichen Überquerungen:
-//    mult = 0.97 / (0.70 ^ k)     [3% House Edge]
-//    k=1: ≈1.39x | k=3: ≈2.83x | k=5: ≈5.77x | k=10: ≈34.3x
-// ================================================================
 
-// ── Spielkonfiguration ──────────────────────────────────────────
 const LANES       = 10;    // Anzahl Fahrspuren auf der Straße
 const DANGER_PROB = 0.30;  // 30% Sterberisiko pro Spur
 
 // Multiplikator nach k sicheren Überquerungen
 function getLaneMult(k) {
-  // Jede Spur hat 70% Überlebenschance → kumulativ 0.97 / 0.7^k
   return 0.97 / Math.pow(0.70, k);
 }
 
-// ── Canvas-Konfiguration ────────────────────────────────────────
 const canvas = document.getElementById("game-canvas");
 const ctx    = canvas.getContext("2d");
 const W = canvas.width;   // 560
@@ -387,9 +368,7 @@ let dangerSet    = new Set();  // Indizes der gefährlichen Spuren (0-9)
 let laneResults  = [];         // Status jeder Spur: 'pending'|'safe'|'danger'|'revealed'
 let crashLaneIdx = -1;         // Index der Spur wo das Huhn gestorben ist (-1 = kein Tod)
 
-// Animation-State: Enthält alle Daten zur laufenden Auto-Animation
-// null = keine Animation läuft
-// { laneIdx, startTime, safe, done }
+
 let animState = null;
 
 // socket wird initialisiert und sobald er server update balance schick, wird das gemacht.

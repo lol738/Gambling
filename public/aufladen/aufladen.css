@@ -1,0 +1,133 @@
+:root {
+    --border: #1a1c20;
+}
+
+body {
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.charge-form {
+    position: relative;
+    z-index: 2;
+}
+
+.logout-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 20px;
+    background: rgba(83,252,24,0.08);
+    border: 1px solid rgba(83,252,24,0.18);
+    border-radius: 7px;
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-decoration: none;
+    transition:
+        background 0.2s,
+        border-color 0.2s,
+        transform 0.2s;
+}
+
+.logout-btn:hover {
+    background: rgba(83,252,24,0.18);
+    border-color: rgba(83,252,24,0.5);
+    transform: translateY(-2px);
+}
+
+.charge-form {
+    width: 320px;
+    margin: 80px auto 0;
+    padding: 30px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    position: relative;
+    z-index: 2;
+    box-shadow:
+        0 0 35px rgba(83,252,24,0.05),
+        0 15px 40px rgba(0,0,0,0.5);
+}
+.charge-form input {
+    width: 100%;
+    box-sizing: border-box;
+    background: #000;
+    border: 1px solid #333;
+    color: white;
+    padding: 12px;
+    border-radius: 6px;
+    outline: none;
+    font-size: 14px;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+.charge-form input::placeholder {
+    color: #64748b;
+}
+
+.charge-form input:focus {
+    border-color: var(--green);
+    box-shadow:
+        0 0 10px rgba(83,252,24,0.15);
+}
+
+#chargeButton {
+    width: 100%;
+    background: var(--green);
+    color: #000;
+    border: none;
+    padding: 14px;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition:
+        filter 0.2s,
+        transform 0.2s;
+}
+
+
+
+#chargeButton:hover {
+    filter: brightness(1.2);
+    transform: translateY(-2px);
+}
+
+
+
+#chargeButton:active {
+    transform: translateY(0);
+}
+
+.balance-box {
+            background: var(--card);
+            border: 1px solid rgba(83,252,24,0.2);
+            border-radius: 10px;
+            padding: 10px 22px;
+            text-align: right;
+            transition: border-color 0.3s;
+        }
+
+        .balance-label { 
+            font-size: 10px; 
+            color: var(--dim); 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px; 
+        }
+
+        .balance-value {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--green);
+            font-variant-numeric: tabular-nums;
+        }

@@ -24,6 +24,7 @@
             padding: 10px 22px;
             text-align: right;
             transition: border-color 0.3s;
+            cursor: pointer;
         }
 
         .balance-box:hover { 

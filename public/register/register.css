@@ -43,18 +43,19 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
+    z-index: 1;
 }
 
 /* CARD */
 .register-card {
-    background: var(--card-bg);
+    background: var(--bg);
     border: 1px solid var(--border);
     padding: 30px;
     border-radius: 12px;
     width: 340px;
 }
 
-/* TITLE */
 .title {
     margin: 0 0 15px 0;
     font-size: 20px;
