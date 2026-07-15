@@ -4,18 +4,49 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>FDC - Ice Field</title>
+
+<!-- 
+  ==========================================================================
+  ÜBERBLICK ÜBER DIESE DATEI (für die Präsentation als "roter Faden" nutzen)
+  ==========================================================================
+  Icefield ist ein "Mines"-artiges Casino-Minispiel (Vorbild: Spiele wie
+  "Mines" auf Stake.com), eingebettet in unser Schulprojekt FDC
+  (Friedrich-Dessauer-Casino).
+
+  Architektur in 2 Sätzen:
+  - Die komplette Spiellogik (Minen setzen, Felder aufdecken, Multiplikator
+    berechnen, Gewinn/Verlust entscheiden) läuft im BROWSER (Client-seitig,
+    reines JavaScript).
+  - Nur die GUTHABEN-ÄNDERUNG (also z.B. "-100" beim Start, "+250" beim
+    Cash Out) wird per Socket.io an einen zentralen Server geschickt, der
+    für ALLE Spiele im Projekt (Würfel, Plinko, Chicken, Icefield ...) das
+    gemeinsame Guthaben verwaltet. Das Spiel selbst "vertraut" also sich
+    selbst, der Server bekommt nur das Endergebnis (die Zahl) mitgeteilt.
+    -> Das ist ein wichtiger Punkt für Rückfragen zur technischen 
+       Funktionsweise, siehe Präsentations-Guide!
+-->
+
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<!-- IP.js definiert die globale Variable IP (Adresse des Backend-Servers),
+     damit nicht in jeder Spiel-Datei die Server-Adresse hart einprogrammiert
+     werden muss -> zentrale Stelle, gemeinsam genutzt von allen Spielen. -->
 <script src="/IP.js"></script>
+<!-- Gemeinsames Design-System (Farben, Header, Buttons) für alle Spiele
+     im Projekt -> sorgt für einheitliches Look & Feel im ganzen Casino. -->
 <link rel="stylesheet" href="/fdc-theme.css">
 <style>
 /* =====================================================
    FDC Design System – identisch mit allen anderen Spielen
+   Alle Spiele im Projekt (Würfel, Plinko, Icefield, Chicken)
+   nutzen dieselben CSS-Variablen (Farben, Abstände) und
+   dieselbe Grundstruktur (Header, "game-container"). Das
+   spart Code-Duplizierung und macht die Optik konsistent.
    ===================================================== */
 :root {
   --bg-color: #010101;
   --card-bg: #0b0e11;
-  --primary-green: #53fc18;
-  --primary-red: #ef4444;
+  --primary-green: #53fc18;   /* "Erfolgs"-Farbe: sichere Felder, Start-Button */
+  --primary-red: #ef4444;     /* "Gefahr"-Farbe: Löcher, Verlust */
   --text-main: #ffffff;
   --text-dim: #94a3b8;
   --border: #1a1c20;
@@ -85,7 +116,9 @@ main {
   padding: 20px;
 }
 
-/* Haupt-Container mit drei Panels */
+/* Haupt-Container mit drei Panels: links Steuerung, Mitte Spielfeld,
+   rechts Multiplikator-Tabelle. Ein klassisches 3-Spalten-Layout mit
+   Flexbox, das die drei logischen Bereiche des Spiels visuell trennt. */
 #game-container {
   display: flex;
   gap: 24px;
@@ -156,12 +189,15 @@ input[type="number"] {
   transition: 0.2s;
 }
 .diff-btn:hover:not(:disabled) { border-color: var(--primary-green); }
-/* Aktive Schwierigkeit leuchtet grün */
+/* Aktive Schwierigkeit leuchtet grün -> gibt dem Spieler visuelles Feedback,
+   welche Einstellung gerade aktiv ist */
 .diff-btn.active {
   background: rgba(83,252,24,0.1);
   border-color: var(--primary-green);
   color: var(--primary-green);
 }
+/* Während einer laufenden Runde gesperrt (siehe JS: gameActive-Check
+   in setDiff()), damit man die Regeln nicht mitten im Spiel ändern kann */
 .diff-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Buttons (Start & Cash Out) */
@@ -184,7 +220,10 @@ input[type="number"] {
 #start-btn:hover:not(:disabled) { filter: brightness(1.2); box-shadow: 0 0 25px rgba(83,252,24,0.5); }
 #start-btn:disabled { background: #1e293b; color: #475569; cursor: not-allowed; box-shadow: none; }
 
-/* Cash-Out-Button – anfangs versteckt, erscheint nach 1. sicheren Tile */
+/* Cash-Out-Button – anfangs versteckt (display:none), erscheint erst nach
+   dem 1. sicheren Tile. Das ist Absicht: Cash Out ergibt vor dem ersten
+   aufgedeckten Feld keinen Sinn, da man noch nichts gewonnen hat
+   (Multiplikator wäre 1.00x = kein Gewinn). */
 #cashout-btn {
   background: #fbbf24; /* Gold */
   color: #000;
@@ -194,7 +233,7 @@ input[type="number"] {
 #cashout-btn:hover { filter: brightness(1.1); box-shadow: 0 0 25px rgba(251,191,36,0.4); }
 #cashout-btn.visible { display: block; }
 
-/* Verlaufs-Anzeige */
+/* Verlaufs-Anzeige der letzten Runden (max. 8 Einträge, siehe addHistory()) */
 #history {
   background: #000;
   border-radius: 8px;
@@ -213,6 +252,10 @@ input[type="number"] {
 
 /* =====================================================
    MITTLERES PANEL – Das 5×5 Ice Grid
+   Wird NICHT statisch im HTML geschrieben, sondern von
+   buildGrid() per JavaScript generiert (25 <div>-Elemente).
+   So kann die Anzahl der Felder leicht zentral geändert
+   werden (TOTAL-Konstante), ohne HTML anzufassen.
    ===================================================== */
 #ice-grid {
   display: grid;
@@ -225,11 +268,11 @@ input[type="number"] {
   border: 1px solid var(--border);
 }
 
-/* Einzelne Eis-Kachel */
+/* Einzelne Eis-Kachel (Grundzustand: verdeckt, klickbar) */
 .tile {
   width: 80px;
   height: 80px;
-  /* Eisblau-Farbverlauf */
+  /* Eisblau-Farbverlauf -> passt zum Ice-Theme */
   background: linear-gradient(135deg, #1e3a5f, #1e4976, #1a3355);
   border: 1px solid rgba(96,165,250,0.3);
   border-radius: 10px;
@@ -243,7 +286,8 @@ input[type="number"] {
   transition: transform 0.15s, box-shadow 0.15s, border-color 0.2s;
   user-select: none;
 }
-/* Eisglanz-Reflexion (kleines weißes Rechteck oben links) */
+/* Eisglanz-Reflexion (kleines weißes Rechteck oben links) - reines
+   Deko-Element, hat keinen Einfluss auf die Spiellogik */
 .tile::before {
   content: '';
   position: absolute;
@@ -254,28 +298,31 @@ input[type="number"] {
   transform: rotate(-20deg);
   pointer-events: none;
 }
-/* Hover-Effekt nur auf aktiven (nicht aufgedeckten) Tiles */
+/* Hover-Effekt nur auf aktiven (nicht aufgedeckten, nicht gesperrten)
+   Tiles -> gibt dem Spieler Feedback, welche Felder noch klickbar sind */
 .tile:hover:not(.revealed):not(.locked) {
   transform: scale(1.07);
   box-shadow: 0 0 16px rgba(96,165,250,0.5);
   border-color: rgba(96,165,250,0.7);
 }
 
-/* Sicheres Tile: grüner Schimmer + Schneeflocke */
+/* Sicheres Tile: grüner Schimmer + Schneeflocke (❄️) + kleine
+   Pop-Animation als visuelle Belohnung */
 .tile.safe {
   background: linear-gradient(135deg, rgba(83,252,24,0.12), rgba(83,252,24,0.04));
   border-color: rgba(83,252,24,0.6);
   cursor: default;
   animation: popIn 0.2s ease;
 }
-/* Loch-Tile: roter Schimmer + Zitter-Animation */
+/* Loch-Tile: roter Schimmer + Zitter-Animation (🕳️) -> klar erkennbares
+   negatives Feedback beim Verlieren */
 .tile.hole {
   background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.05));
   border-color: rgba(239,68,68,0.6);
   cursor: default;
   animation: shake 0.3s ease;
 }
-/* Gesperrtes Tile (Spiel nicht aktiv) */
+/* Gesperrtes Tile (Spiel nicht aktiv, oder Runde vorbei) */
 .tile.locked { cursor: not-allowed; opacity: 0.6; }
 
 @keyframes popIn {
@@ -290,6 +337,9 @@ input[type="number"] {
 
 /* =====================================================
    RECHTES PANEL – Multiplikatoren-Tabelle
+   Zeigt vorab an, welchen Multiplikator man bei k sicheren
+   Feldern bekommt -> wichtig für Spieler-Entscheidung
+   "weitermachen oder Cash Out?"
    ===================================================== */
 #mult-panel {
   width: 195px;
@@ -325,14 +375,15 @@ input[type="number"] {
   border: 1px solid #14171c;
   transition: 0.2s;
 }
-/* Aktuelle Fortschritts-Zeile leuchtet grün */
+/* Aktuelle Fortschritts-Zeile leuchtet grün -> zeigt live, bei welchem
+   Multiplikator man sich gerade befindet (siehe updateMultTable()) */
 .mult-row.current {
   background: rgba(83,252,24,0.12);
   border-color: var(--primary-green);
   color: var(--primary-green);
   box-shadow: 0 0 10px rgba(83,252,24,0.15);
 }
-/* Bereits erreichte Zeilen ausgrauen */
+/* Bereits erreichte (überschrittene) Zeilen werden ausgegraut */
 .mult-row.passed { opacity: 0.35; }
 
 .mute-toggle {
@@ -367,13 +418,16 @@ input[type="number"] {
          ==================================================== -->
     <div id="ui-panel">
 
-      <!-- Guthaben -->
+      <!-- Guthaben: wird NICHT lokal berechnet, sondern kommt vom
+           Server (socket.on("updateBalance", ...) weiter unten im
+           Script) -> Server ist die "Quelle der Wahrheit" fürs Geld -->
       <div class="stat-box">
         <div class="stat-label">Guthaben</div>
         <div id="balance" class="value">$10,000.00</div>
       </div>
 
-      <!-- Einsatz-Eingabe -->
+      <!-- Einsatz-Eingabe: Nutzer kann Zahl direkt eintippen ODER
+           einen der drei Schnellwahl-Buttons nutzen (setBet()) -->
       <div>
         <input type="number" id="bet-input" value="100" min="1" />
         <div class="quick-bets">
@@ -383,7 +437,8 @@ input[type="number"] {
         </div>
       </div>
 
-      <!-- Schwierigkeit wählen -->
+      <!-- Schwierigkeit wählen: bestimmt direkt die Anzahl der Minen
+           (numMines) und dadurch die gesamte Multiplikator-Kurve -->
       <div>
         <div class="stat-label" style="margin-bottom:6px">Schwierigkeit</div>
         <div class="diff-row">
@@ -393,25 +448,30 @@ input[type="number"] {
         </div>
       </div>
 
-      <!-- Aktueller Gewinn wenn Cash Out jetzt -->
+      <!-- Zeigt live an, wie viel man JETZT bekommen würde, wenn man
+           sofort Cash Out drückt (wird nach jedem sicheren Klick
+           aktualisiert, siehe clickTile()) -->
       <div class="stat-box">
         <div class="stat-label">Aktueller Gewinn</div>
         <div id="current-win" class="value">–</div>
       </div>
 
-      <!-- Start-Button -->
+      <!-- Start-Button: löst startGame() aus -->
       <button class="game-btn" id="start-btn" onclick="startGame()">Spiel Starten</button>
 
-      <!-- Cash-Out-Button (erscheint nach 1. sicherem Tile) -->
+      <!-- Cash-Out-Button (per CSS anfangs unsichtbar, wird erst nach
+           dem 1. sicheren Tile per JS eingeblendet) -->
       <button class="game-btn" id="cashout-btn" onclick="cashOut()">💰 Cash Out</button>
 
-      <!-- Verlauf der letzten Runden -->
+      <!-- Verlauf der letzten Runden (wird per addHistory() befüllt) -->
       <div id="history"></div>
 
     </div>
 
     <!-- ====================================================
          MITTLERES PANEL – Ice Grid (5×5 = 25 Tiles)
+         Bewusst LEER gelassen -> wird komplett dynamisch von
+         buildGrid() erzeugt (siehe Script unten)
          ==================================================== -->
     <div id="ice-grid">
       <!-- Wird per JavaScript generiert -->
@@ -419,6 +479,7 @@ input[type="number"] {
 
     <!-- ====================================================
          RECHTES PANEL – Multiplikatoren-Tabelle
+         Ebenfalls dynamisch befüllt von buildMultTable()
          ==================================================== -->
     <div id="mult-panel">
       <div class="panel-title" id="mult-title">Multiplikatoren</div>
@@ -439,51 +500,83 @@ input[type="number"] {
 //  - Jede sicher aufgedeckte Kachel erhöht den Multiplikator
 //  - Du kannst jederzeit "Cash Out" drücken bevor du ins Loch fällst
 //  - Triffst du ein Loch, verlierst du deinen Einsatz
+//
+//  GRUNDPRINZIP DES SPIELABLAUFS (für die Präsentation als Merkhilfe):
+//  1) Einsatz + Schwierigkeit wählen  -> startGame()
+//  2) Minen werden zufällig verteilt  -> placeMines()
+//  3) Spieler klickt Felder an        -> clickTile()
+//  4) Bei jedem sicheren Feld: neuer Multiplikator -> getMult()
+//  5) Spieler entscheidet: weiterklicken ODER Cash Out -> cashOut()
+//  6) Runde endet (gewonnen oder verloren)             -> endGame()
 // ================================================================
 
 // ── Konfiguration ────────────────────────────────────────────────
-const TOTAL = 25; // 5×5 Grid → 25 Tiles gesamt
+const TOTAL = 25; // 5×5 Grid → 25 Tiles gesamt (feste Spielfeldgröße)
 
-// Anzahl der Minen je nach Schwierigkeit
+// Anzahl der Minen je nach Schwierigkeit. Diese Konfiguration ist der
+// einzige Ort, an dem sich "Easy/Mid/Hard" tatsächlich unterscheiden -
+// der ganze Rest des Codes (Wahrscheinlichkeit, Multiplikator, Grid)
+// passt sich automatisch an numMines an. Das ist bewusst so gebaut,
+// damit man keine Sonderfälle pro Schwierigkeit braucht.
 const DIFF_CONFIG = {
   easy:   { mines: 3  },
   medium: { mines: 8  },
   hard:   { mines: 15 }
 };
 
-// ── Spielzustand ────────────────────────────────────────────────
-let balance    = 3000;      // Aktuelles Guthaben des Spielers
-let currentBet = 100;        // Höhe des gesetzten Einsatzes
+// ── Spielzustand (globale Variablen) ─────────────────────────────
+// Diese Variablen bilden zusammen den "State" einer laufenden Runde.
+// Sie werden bei jedem startGame() zurückgesetzt und bei jedem Klick
+// / Cash Out aktualisiert. Das ist der zentrale Zustand, den man
+// unbedingt verstehen muss, um den restlichen Code nachzuvollziehen.
+let balance    = 3000;      // Aktuelles Guthaben des Spielers (wird vom Server überschrieben, siehe socket.on unten)
+let currentBet = 100;        // Höhe des gesetzten Einsatzes für die laufende Runde
 let isMuted    = false;      // Sound an/aus
-let gameActive = false;      // Läuft gerade eine Runde?
-let mineSet    = new Set();  // Enthält die Indizes aller Loch-Tiles
-let revealed   = 0;          // Anzahl sicher aufgedeckter Tiles
-let difficulty = 'easy';     // Aktuelle Schwierigkeit
-let numMines   = 3;          // Anzahl Löcher (ändert sich mit Schwierigkeit)
+let gameActive = false;      // Läuft gerade eine Runde? Steuert, ob Klicks/Buttons erlaubt sind
+let mineSet    = new Set();  // Enthält die Indizes (0-24) aller Loch-Tiles der aktuellen Runde
+let revealed   = 0;          // Anzahl sicher aufgedeckter Tiles in der laufenden Runde -> steuert Multiplikator
+let difficulty = 'easy';     // Aktuelle Schwierigkeit (nur zur Anzeige/Titel)
+let numMines   = 3;          // Anzahl Löcher (Kopie aus DIFF_CONFIG, ändert sich mit Schwierigkeit)
 
-// socket wird initialisiert und sobald er server update balance schick, wird das gemacht.
+// ── Verbindung zum Server (Socket.io) ────────────────────────────
+// Wichtig für die technische Erklärung: Das Spiel selbst braucht
+// KEINE Server-Verbindung, um zu funktionieren (Minen, Klicks,
+// Multiplikator laufen komplett lokal im Browser). Der Socket wird
+// NUR gebraucht, um das Guthaben mit dem zentralen Server zu
+// synchronisieren, damit derselbe Kontostand auch in den anderen
+// Spielen (Würfel, Plinko, Chicken ...) sichtbar ist.
 const socket = io(`http://${IP}:3000`, {
     withCredentials: true,
     transports: ["websocket"]
 });
 
+// Der Server ist die "Quelle der Wahrheit" für das Guthaben: Sobald
+// er eine neue Balance zurückschickt (z.B. nach Verarbeitung eines
+// updateBalance-Events), übernimmt der Client sie 1:1 und rendert sie.
 socket.on("updateBalance", (newBalance) => {
     balance = newBalance;
     updateBalance();
 });
 
 // ── Guthaben-Anzeige aktualisieren ──────────────────────────────
+// Reine Darstellungs-Funktion: nimmt die balance-Variable und
+// formatiert sie als Dollarbetrag mit zwei Nachkommastellen.
 function updateBalance() {
   document.getElementById("balance").innerText =
     `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 }
 
-// Schnell-Einsatz setzen
+// Schnell-Einsatz setzen (nur erlaubt, wenn gerade keine Runde läuft,
+// sonst könnte man während des Spiels den Einsatz manipulieren)
 function setBet(v) {
   if (!gameActive) document.getElementById("bet-input").value = v;
 }
 
 // ── Sound-Engine (gleicher Aufbau wie in würfel.html) ────────────
+// Statt fertige Audio-Dateien zu laden, werden Töne live per Web
+// Audio API erzeugt (Oszillator + Lautstärke-Hüllkurve). Vorteil:
+// keine externen Assets nötig, sehr leichtgewichtig, gleiches Muster
+// wird in allen Spielen des Projekts wiederverwendet.
 function toggleMute() {
   isMuted = !isMuted;
   document.getElementById("mute-btn").innerText = isMuted ? "🔇 MUTED" : "🔊 SOUND ON";
@@ -504,11 +597,11 @@ function tone(freq, type, dur, vol) {
 }
 
 const sounds = {
-  // Heller Kristall-Ton beim sicheren Aufdecken
+  // Heller Kristall-Ton beim sicheren Aufdecken -> positives Feedback
   safe:  () => tone(880, "sine", 0.12, 0.06),
-  // Dumpfer Einbruch-Sound beim Loch
+  // Dumpfer Einbruch-Sound beim Loch (zwei Töne = "Einbruch"-Effekt)
   hole:  () => { tone(120, "sawtooth", 0.3, 0.06); setTimeout(() => tone(90, "sawtooth", 0.3, 0.04), 150); },
-  // Gewinn-Jingle beim Cash Out
+  // Gewinn-Jingle beim Cash Out (aufsteigende Dreiklang-Melodie)
   win:   () => {
     tone(523, "sine", 0.15, 0.08);
     setTimeout(() => tone(659, "sine", 0.15, 0.08), 100);
@@ -519,11 +612,24 @@ const sounds = {
 };
 
 // ── Multiplikator-Berechnung ─────────────────────────────────────
+// DAS ist das mathematische Herzstück des Spiels und mit hoher
+// Wahrscheinlichkeit eine Rückfrage des Lehrers wert!
 //
 //  Mathematik dahinter:
-//  Wahrscheinlichkeit, k sichere Tiles in Folge aufzudecken:
+//  Wahrscheinlichkeit, k sichere Tiles HINTEREINANDER (ohne
+//  Zurücklegen) aufzudecken, ohne dabei eine Mine zu treffen:
 //    P = (safe * (safe-1) * ... * (safe-k+1))
 //        / (total * (total-1) * ... * (total-k+1))
+//  Das ist mathematisch dasselbe wie: P = C(safe, k) / C(total, k)
+//  ("Binomialkoeffizient" - Anzahl möglicher k-Kombinationen aus den
+//  sicheren Feldern, geteilt durch alle möglichen k-Kombinationen)
+//
+//  Der Multiplikator ist der "faire" Kehrwert dieser Wahrscheinlichkeit
+//  (je unwahrscheinlicher es war, so weit zu kommen, desto höher die
+//  Belohnung), multipliziert mit 0.97, um dem Casino im Schnitt einen
+//  Vorteil von 3% zu sichern (House Edge). Ohne diesen Faktor wäre
+//  das Spiel auf Dauer "fair" (Erwartungswert = Einsatz), mit ihm ist
+//  es auf Dauer leicht zugunsten des Casinos.
 //
 //  Multiplikator = (1 / P) × 0.97   → 3% House Edge
 //
@@ -533,40 +639,46 @@ const sounds = {
 //    k=10: P ≈ 0.17          → Mult ≈ 5.62x
 //
 function getMult(k) {
-  if (k === 0) return 1.0;
+  if (k === 0) return 1.0; // Ohne aufgedecktes Feld gibt es noch keinen Gewinn
   const safe = TOTAL - numMines;
   let p = 1;
-  // Produkt der Wahrscheinlichkeiten für jeden Schritt
+  // Produkt der Einzelwahrscheinlichkeiten für jeden weiteren Schritt
+  // (jedes Feld verringert sowohl "safe" als auch "total" um 1, weil
+  // es nicht mit Zurücklegen gezogen wird)
   for (let i = 0; i < k; i++) p *= (safe - i) / (TOTAL - i);
-  return (1 / p) * 0.97; // Mit House Edge
+  return (1 / p) * 0.97; // Kehrwert der Wahrscheinlichkeit, mit House Edge
 }
 
 // ── Multiplikatoren-Tabelle aufbauen ────────────────────────────
+// Wird bei Spielstart und bei jedem Schwierigkeitswechsel neu erzeugt,
+// da sich mit numMines auch alle Multiplikatorwerte ändern.
 function buildMultTable() {
   const panel = document.getElementById("mult-panel");
   // Titel mit aktueller Schwierigkeit
   document.getElementById("mult-title").textContent =
     `Multiplikatoren (${difficulty === 'easy' ? 'Easy' : difficulty === 'medium' ? 'Mid' : 'Hard'}, ${numMines} Löcher)`;
 
-  // Alte Einträge löschen
+  // Alte Einträge löschen, bevor neue erzeugt werden (sonst würden
+  // sich bei jedem Wechsel immer mehr Zeilen ansammeln)
   panel.querySelectorAll(".mult-row").forEach(r => r.remove());
 
   const safe  = TOTAL - numMines;
-  const limit = Math.min(safe, 15); // Maximal 15 Einträge anzeigen
+  const limit = Math.min(safe, 15); // Maximal 15 Einträge anzeigen (Platzgrund im Panel)
 
   for (let k = 1; k <= limit; k++) {
     const row = document.createElement("div");
     row.className = "mult-row";
-    row.id = `mr-${k}`;
+    row.id = `mr-${k}`; // ID enthält die Feld-Anzahl -> wird in updateMultTable() ausgelesen
     row.innerHTML = `<span>${k} Feld${k > 1 ? 'er' : ''}</span><span>${getMult(k).toFixed(2)}x</span>`;
     panel.appendChild(row);
   }
 }
 
-// Aktuellen Fortschritt in der Tabelle hervorheben
+// Aktuellen Fortschritt in der Tabelle hervorheben (grün = aktuelle
+// Zeile, ausgegraut = bereits "passierte" Multiplikatoren)
 function updateMultTable() {
   document.querySelectorAll(".mult-row").forEach(row => {
-    const k = parseInt(row.id.split("-")[1]);
+    const k = parseInt(row.id.split("-")[1]); // Zahl aus "mr-5" -> 5
     row.classList.remove("current", "passed");
     if      (k === revealed) row.classList.add("current");
     else if (k < revealed)  row.classList.add("passed");
@@ -575,27 +687,30 @@ function updateMultTable() {
 
 // ── Schwierigkeit wechseln ───────────────────────────────────────
 function setDiff(d, btn) {
-  if (gameActive) return; // Nicht während einer Runde wechseln
+  if (gameActive) return; // Nicht während einer laufenden Runde wechseln (würde Multiplikatoren mitten im Spiel verändern)
   difficulty = d;
   numMines   = DIFF_CONFIG[d].mines;
 
-  // Button-Zustände aktualisieren
+  // Button-Zustände aktualisieren (nur der geklickte Button wird "active")
   document.querySelectorAll(".diff-btn").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
 
-  // Tabelle und Grid neu aufbauen
+  // Tabelle und Grid neu aufbauen, da sich mit numMines alles ändert
   buildMultTable();
   buildGrid();
 }
 
 // ── Grid aufbauen (zu Spielbeginn oder bei Schwierigkeitswechsel) ─
+// Erzeugt 25 identische <div>-Kacheln rein per JavaScript. Jede
+// Kachel merkt sich ihren Index über data-i, damit clickTile()
+// später weiß, welches Feld angeklickt wurde.
 function buildGrid() {
   const g = document.getElementById("ice-grid");
-  g.innerHTML = "";
+  g.innerHTML = ""; // Altes Grid vollständig entfernen
 
   for (let i = 0; i < TOTAL; i++) {
     const t = document.createElement("div");
-    t.className   = "tile locked"; // Gesperrt bis das Spiel startet
+    t.className   = "tile locked"; // Gesperrt bis das Spiel startet (verhindert Klicks außerhalb einer Runde)
     t.dataset.i   = i;
     t.onclick     = () => clickTile(i);
     g.appendChild(t);
@@ -603,34 +718,46 @@ function buildGrid() {
 }
 
 // ── Minen zufällig platzieren ────────────────────────────────────
+// Nutzt ein Set (statt Array), weil ein Set automatisch verhindert,
+// dass derselbe Index doppelt eingetragen wird (mineSet.add ignoriert
+// Duplikate). Die while-Schleife läuft so lange, bis genau numMines
+// EINDEUTIGE Positionen gefunden wurden.
 function placeMines() {
   mineSet.clear();
-  // Solange zufällige Indizes hinzufügen bis die gewünschte Anzahl erreicht ist
   while (mineSet.size < numMines) mineSet.add(Math.floor(Math.random() * TOTAL));
 }
 
 // ── Spiel starten ───────────────────────────────────────────────
+// Schritt 1 des Spielablaufs: Einsatz prüfen, Minen setzen, UI
+// entsperren. Ab hier ist gameActive = true und der Spieler kann
+// Felder anklicken.
 function startGame() {
-  // Einsatz validieren
+  // Einsatz validieren: muss eine Zahl > 0 sein und darf das
+  // vorhandene Guthaben nicht übersteigen
   currentBet = parseFloat(document.getElementById("bet-input").value);
   if (!currentBet || currentBet <= 0 || currentBet > balance) {
     alert("Ungültiger Einsatz!"); return;
   }
 
-  // Einsatz vom Guthaben abziehen
+  // Einsatz sofort vom Guthaben abziehen (negativer Betrag an den
+  // Server senden) -> Server bucht den Betrag ab und bestätigt später
+  // über das "updateBalance"-Event mit dem neuen Kontostand
   socket.emit("updateBalance", (-currentBet));
 
-  // Spielzustand zurücksetzen
+  // Spielzustand für die neue Runde zurücksetzen
   gameActive = true;
   revealed   = 0;
-  placeMines();
-  buildGrid();
+  placeMines();      // Neue, zufällige Minenverteilung für diese Runde
+  buildGrid();        // Grid neu aufbauen (alle Felder wieder verdeckt)
   buildMultTable();
 
-  // Alle Tiles entsperren (klickbar machen)
+  // Alle Tiles entsperren (klickbar machen) - vorher waren sie
+  // per CSS-Klasse "locked" deaktiviert
   document.querySelectorAll(".tile").forEach(t => t.classList.remove("locked"));
 
-  // UI aktualisieren
+  // UI in den "Runde läuft"-Zustand versetzen: Start/Einsatz/
+  // Schwierigkeit sperren, damit während der Runde nichts verändert
+  // werden kann, das die Fairness beeinflussen würde
   document.getElementById("start-btn").disabled = true;
   document.getElementById("bet-input").disabled = true;
   document.querySelectorAll(".diff-btn").forEach(b => b.disabled = true);
@@ -639,50 +766,61 @@ function startGame() {
 }
 
 // ── Tile anklicken ───────────────────────────────────────────────
+// Das ist die zentrale Entscheidungsfunktion des Spiels: hier wird
+// bei jedem Klick geprüft, ob das Feld sicher ist oder eine Mine war.
 function clickTile(i) {
-  if (!gameActive) return;
+  if (!gameActive) return; // Klicks außerhalb einer laufenden Runde ignorieren
 
   const t = document.querySelector(`.tile[data-i="${i}"]`);
   // Tile muss existieren und darf noch nicht aufgedeckt/gesperrt sein
+  // (verhindert Mehrfachklicks auf dasselbe Feld)
   if (!t || t.classList.contains("revealed") || t.classList.contains("locked")) return;
 
   t.classList.add("revealed");
 
   if (mineSet.has(i)) {
     // ── LOCH! Verloren ──────────────────────────────────────────
+    // Das angeklickte Feld ist in der Minen-Menge enthalten
     t.classList.add("hole");
     t.textContent = "🕳️";
     sounds.hole();
-    endGame(false);
+    endGame(false); // Runde als "verloren" beenden
 
   } else {
     // ── SICHER! Weitermachen ────────────────────────────────────
     t.classList.add("safe");
     t.textContent = "❄️";
     sounds.safe();
-    revealed++;
+    revealed++; // Zähler für sicher aufgedeckte Felder erhöhen
 
-    // Aktuellen Multiplikator & potenziellen Gewinn anzeigen
+    // Aktuellen Multiplikator & potenziellen Gewinn neu berechnen
+    // und anzeigen -> Spieler sieht sofort, was er bei Cash Out bekäme
     const mult = getMult(revealed);
     document.getElementById("current-win").innerText =
       `${mult.toFixed(2)}x ($${(currentBet * mult).toFixed(2)})`;
 
-    // Cash-Out-Button ab dem ersten sicheren Tile anzeigen
+    // Cash-Out-Button ab dem ersten sicheren Tile anzeigen (vorher
+    // ergibt Cash Out keinen Sinn, da Multiplikator noch 1.00x wäre)
     document.getElementById("cashout-btn").classList.add("visible");
     updateMultTable();
 
-    // Automatisch auszahlen wenn alle sicheren Tiles aufgedeckt wurden
+    // Sonderfall: Wenn ALLE sicheren Felder aufgedeckt wurden (keine
+    // weiteren Klicks mehr möglich, ohne zwangsläufig eine Mine zu
+    // treffen), wird automatisch ausgezahlt, statt den Spieler
+    // "ins Leere klicken" zu lassen
     if (revealed >= TOTAL - numMines) cashOut();
   }
 }
 
 // ── Cash Out ─────────────────────────────────────────────────────
+// Schritt "Gewinn sichern": beendet die Runde freiwillig und zahlt
+// den aktuellen Multiplikator-Gewinn aus.
 function cashOut() {
-  if (!gameActive || revealed === 0) return;
+  if (!gameActive || revealed === 0) return; // Ohne mind. 1 sicheres Feld gibt es nichts auszuzahlen
 
   const mult = getMult(revealed);
   const win  = currentBet * mult;
-  socket.emit("updateBalance", (win));
+  socket.emit("updateBalance", (win)); // Positiven Betrag an den Server senden -> Guthaben wird erhöht
 
   sounds.win();
   addHistory(true, mult, win);
@@ -690,10 +828,16 @@ function cashOut() {
 }
 
 // ── Spiel beenden (Sieg oder Niederlage) ─────────────────────────
+// Wird sowohl bei einem Loch-Treffer (won=false) als auch nach
+// Cash Out (won=true) aufgerufen. Übernimmt das "Aufräumen" der
+// Runde: alle Minen aufdecken, UI wieder in den Ausgangszustand
+// versetzen, damit eine neue Runde gestartet werden kann.
 function endGame(won) {
   gameActive = false;
 
-  // Alle Minen sichtbar machen (Aufdeckung)
+  // Alle noch nicht getroffenen Minen am Ende der Runde sichtbar
+  // machen, damit der Spieler sieht, wo die Löcher tatsächlich lagen
+  // (Transparenz/Nachvollziehbarkeit des Zufalls)
   mineSet.forEach(idx => {
     const t = document.querySelector(`.tile[data-i="${idx}"]`);
     if (t && !t.classList.contains("hole")) {
@@ -702,7 +846,8 @@ function endGame(won) {
     }
   });
 
-  // Alle nicht aufgedeckten Tiles sperren
+  // Alle übrigen, nicht aufgedeckten Tiles sperren, damit nach
+  // Rundenende keine Klicks mehr etwas auslösen
   document.querySelectorAll(".tile:not(.revealed)").forEach(t => t.classList.add("locked"));
 
   if (!won) {
@@ -711,7 +856,7 @@ function endGame(won) {
     addHistory(false, 0, -currentBet);
   }
 
-  // Buttons für nächste Runde freigeben
+  // Buttons/Inputs für die nächste Runde wieder freigeben
   document.getElementById("start-btn").disabled = false;
   document.getElementById("bet-input").disabled = false;
   document.querySelectorAll(".diff-btn").forEach(b => b.disabled = false);
@@ -719,23 +864,28 @@ function endGame(won) {
 }
 
 // ── Verlaufs-Eintrag hinzufügen ──────────────────────────────────
+// Zeigt die letzten Runden übersichtlich an (max. 8 Einträge,
+// älteste wird automatisch entfernt -> einfache "Ringpuffer"-Logik)
 function addHistory(won, mult, amount) {
   const h    = document.getElementById("history");
   const item = document.createElement("div");
   item.className = "history-item";
 
   if (won) {
-    const c = mult >= 2 ? "var(--primary-green)" : "#fff";
+    const c = mult >= 2 ? "var(--primary-green)" : "#fff"; // Besonders hohe Gewinne extra hervorheben
     item.innerHTML = `<span>${mult.toFixed(2)}x</span><span style="color:${c}">+$${amount.toFixed(2)}</span>`;
   } else {
     item.innerHTML = `<span>🕳️ Loch</span><span style="color:var(--primary-red)">-$${Math.abs(amount).toFixed(2)}</span>`;
   }
 
-  h.prepend(item);
-  if (h.children.length > 8) h.removeChild(h.lastChild);
+  h.prepend(item); // Neuester Eintrag immer ganz oben
+  if (h.children.length > 8) h.removeChild(h.lastChild); // Liste auf 8 Einträge begrenzen
 }
 
 // ── Initialisierung beim Seitenstart ─────────────────────────────
+// Diese drei Aufrufe sorgen dafür, dass die Seite beim Laden schon
+// eine sinnvolle Ausgangsansicht zeigt (Tabelle + leeres, gesperrtes
+// Grid + aktuelles Guthaben), OHNE dass schon eine Runde läuft.
 buildMultTable();
 buildGrid();
 updateBalance();
