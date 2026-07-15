@@ -1,2 +1,2 @@
-const IP = "192.168.178.48";
+const IP = "localhost";
 module.exports = IP;
