@@ -426,14 +426,9 @@ const DANGER_PROB = 0.40;  // 30% Sterberisiko PRO SPUR (unabhängig voneinander
 //  Das ist genau das Geschäftsmodell jedes echten Casinos (auch bei
 //  Roulette, Blackjack etc. gibt es immer so eine kleine eingebaute
 //  Gewinnspanne für das Haus – bei uns eben 3%).
-//
-//  Beispielrechnung zum Vorrechnen in der Präsentation:
-//    k=1:  0.97 / 0.70^1 = 0.97 / 0.70  ≈ 1.39x
-//    k=3:  0.97 / 0.70^3 = 0.97 / 0.343 ≈ 2.83x
-//    k=5:  0.97 / 0.70^5 ≈ 5.77x
-//    k=10: 0.97 / 0.70^10 ≈ 34.3x  (alle 10 Spuren geschafft!)
+
 function getLaneMult(k) {
-  return 0.93 / Math.pow(0.60, k);
+  return 0.55 / Math.pow(0.60, k);
 }
 
 // ── Canvas-Setup ──────────────────────────────────────────────────
