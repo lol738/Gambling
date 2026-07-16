@@ -352,7 +352,7 @@ cursor: pointer;
 
 <div id="multiplier-panel">
 <div class="panel-title">Cyber Multiplikator</div>
-<div class="mult-row" id="m-1"><span>Standard</span><span>0.5x</span></div>
+<div class="mult-row" id="m-1"><span>Standard</span><span>1x</span></div>
 <div class="mult-row" id="m-2"><span>Double</span><span>2x</span></div>
 <div class="mult-row" id="m-3"><span>Triple</span><span>3x</span></div>
 <div class="mult-row" id="m-5"><span>MEGA BOOST</span><span>5x</span></div>
@@ -456,7 +456,7 @@ document.getElementById("btn-over").disabled = true;
 document.getElementById("bet-input").disabled = true;
 
 const multRand = Math.random();
-let multiplier = 0.5;
+let multiplier = 1;
 if (multRand > 0.92) multiplier = 5;
 else if (multRand > 0.75) multiplier = 3;
 else if (multRand > 0.5) multiplier = 2;
