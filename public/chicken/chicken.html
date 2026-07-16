@@ -4,22 +4,35 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>FDC - The Chicken Game</title>
+
+<!-- Socket.IO Client-Library: ermöglicht Echtzeit-Kommunikation zwischen
+     diesem Browser-Tab und unserem Node.js-Backend, ohne dass die Seite
+     neu geladen werden muss (WebSocket-Verbindung, bidirektional). -->
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+<!-- IP.js definiert die globale Variable IP (Adresse unseres Backend-Servers).
+     Ausgelagert, damit wir die Server-IP nicht in jeder Datei einzeln pflegen müssen. -->
 <script src="/IP.js"></script>
+
+<!-- Gemeinsames Theme aller FDC-Seiten (Partikel-Hintergrund, Glow-Effekte etc.) -->
 <link rel="stylesheet" href="/fdc-theme.css">
+
 <style>
 /* =====================================================
    FDC Design System – identisch mit allen anderen Spielen
+   (Würfel, Plinko, Rubbellose, Ice Field, Snake & Stake)
+   Diese CSS-Variablen sind das "Farbschema" des gesamten Casinos.
+   Wird eine Farbe hier geändert, ändert sie sich überall im Spiel.
    ===================================================== */
 :root {
-  --bg-color: #000000;
-  --card-bg: #0b0e11;
-  --primary-green: #53fc18;
-  --primary-red: #ef4444;
-  --primary-yellow: #fbbf24;
-  --text-main: #ffffff;
-  --text-dim: #94a3b8;
-  --border: #1a1c20;
+  --bg-color: #000000;        /* Haupt-Hintergrund: reines Schwarz */
+  --card-bg: #0b0e11;         /* Etwas helleres Schwarz für Panels/Karten */
+  --primary-green: #53fc18;   /* FDC-Markenfarbe (Neongrün) – Erfolg, Buttons, Logo */
+  --primary-red: #ef4444;     /* Warnfarbe – Verlust, Gefahr */
+  --primary-yellow: #fbbf24;  /* Gold – Cash-Out, besondere Aktionen */
+  --text-main: #ffffff;       /* Haupttextfarbe */
+  --text-dim: #94a3b8;        /* Gedämpfte Labels/Beschriftungen */
+  --border: #1a1c20;          /* Subtile Rahmenfarbe für Panels */
 }
 
 body {
@@ -30,10 +43,10 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: hidden;
+  overflow: hidden;   /* Verhindert Scrollen – das Spiel soll bildschirmfüllend wirken */
 }
 
-/* --- Header (identisch mit anderen Spielen) --- */
+/* --- Header: Logo + Sound-Toggle, exakt gleich wie in allen anderen Spielen --- */
 header {
   display: flex;
   justify-content: space-between;
@@ -50,11 +63,16 @@ header {
   letter-spacing: 14px;
   color: var(--primary-green);
   margin: 0;
+  /* Pulsierende Glow-Animation für das Logo (siehe @keyframes weiter unten) */
   animation: fdcLogoPulse 3.5s ease-in-out infinite;
-  cursor: pointer;
+  cursor: pointer; /* Zeigt an: Logo ist klickbar (führt zurück zur Lobby) */
 }
+
+/* z-index sorgt dafür, dass Header/Main ÜBER dem animierten Partikel-Hintergrund
+   liegen (der Hintergrund läuft auf einem eigenen <canvas> im Hintergrund-Layer) */
 header { position: relative; z-index: 1; }
 main, #game-container { position: relative; z-index: 1; }
+
 .fdc-back-btn {
   color: var(--text-dim);
   text-decoration: none;
@@ -67,13 +85,14 @@ main, #game-container { position: relative; z-index: 1; }
   margin-right: 14px;
 }
 .fdc-back-btn:hover { color: var(--primary-green); border-color: rgba(83,252,24,0.4); background: rgba(83,252,24,0.06); }
+
 .sub-title {
   font-size: 13.5px;
   text-transform: uppercase;
   font-weight: 600;
   color: var(--primary-green);
   text-align: justify;
-  text-align-last: justify;
+  text-align-last: justify; /* Zieht die letzte Zeile auf volle Breite (Blocksatz-Effekt) */
   margin-top: 5px;
   width: 100%;
 }
@@ -86,7 +105,7 @@ main {
   padding: 20px;
 }
 
-/* Haupt-Container mit drei Panels */
+/* Haupt-Container: drei Panels nebeneinander (Steuerung | Canvas | Spuren-Tabelle) */
 #game-container {
   display: flex;
   gap: 24px;
@@ -97,7 +116,7 @@ main {
 }
 
 /* =====================================================
-   LINKES PANEL – Steuerung
+   LINKES PANEL – Steuerung (Guthaben, Einsatz, Buttons, Verlauf)
    ===================================================== */
 #ui-panel {
   width: 240px;
@@ -137,7 +156,8 @@ input[type="number"] {
 }
 .qb:hover { background: #333; }
 
-/* Alle Aktions-Buttons */
+/* Gemeinsame Basis-Klasse für alle drei Aktions-Buttons.
+   Die spezifischen Farben (grün/blau/gold) kommen aus den IDs darunter. */
 .game-btn {
   border: none;
   padding: 14px;
@@ -151,7 +171,7 @@ input[type="number"] {
   letter-spacing: 0.5px;
 }
 
-/* Start-Button (grün) */
+/* Start-Button (grün) – Standard-Zustand vor Rundenbeginn */
 #start-btn {
   background: var(--primary-green);
   color: #000;
@@ -160,7 +180,8 @@ input[type="number"] {
 #start-btn:hover:not(:disabled) { filter: brightness(1.2); box-shadow: 0 0 25px rgba(83,252,24,0.5); }
 #start-btn:disabled { background: #1e293b; color: #475569; cursor: not-allowed; box-shadow: none; }
 
-/* "Nächste Spur"-Button (blau) – erscheint nur während Spiel */
+/* "Nächste Spur"-Button (blau) – nur sichtbar WÄHREND einer laufenden Runde.
+   display:none per Default, .visible schaltet ihn per JS sichtbar. */
 #cross-btn {
   background: #3b82f6;
   color: #fff;
@@ -171,7 +192,8 @@ input[type="number"] {
 #cross-btn:disabled { background: #1e293b; color: #475569; cursor: not-allowed; box-shadow: none; }
 #cross-btn.visible { display: block; }
 
-/* Cash-Out-Button (gold) – erscheint nach erster sicherer Spur */
+/* Cash-Out-Button (gold) – erscheint erst NACHDEM mindestens eine Spur
+   sicher überquert wurde (vorher gibt es ja noch nichts auszuzahlen) */
 #cashout-btn {
   background: var(--primary-yellow);
   color: #000;
@@ -182,7 +204,7 @@ input[type="number"] {
 #cashout-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 #cashout-btn.visible { display: block; }
 
-/* Verlaufs-Anzeige */
+/* Verlaufs-Anzeige: zeigt die letzten Runden-Ergebnisse (Gewinn/Verlust) */
 #history {
   background: #000;
   border-radius: 8px;
@@ -200,7 +222,10 @@ input[type="number"] {
 }
 
 /* =====================================================
-   MITTLERES PANEL – Canvas (Straßen-Ansicht)
+   MITTLERES PANEL – Canvas (die eigentliche Straßen-Grafik)
+   Der komplette visuelle Spielverlauf wird NICHT mit HTML-Elementen
+   gebaut, sondern in einem <canvas> per JavaScript gezeichnet.
+   Das ist performanter für Animationen (Auto-Bewegung, Huhn-Wippen).
    ===================================================== */
 #canvas-wrapper {
   background: #000;
@@ -211,7 +236,8 @@ input[type="number"] {
 canvas { display: block; }
 
 /* =====================================================
-   RECHTES PANEL – Spuren-Übersicht
+   RECHTES PANEL – Übersichtstabelle aller 10 Spuren mit ihren
+   Multiplikatoren. Zeigt dem Spieler transparent, was ihn erwartet.
    ===================================================== */
 #lane-panel {
   width: 185px;
@@ -246,12 +272,10 @@ canvas { display: block; }
   border: 1px solid #14171c;
   transition: 0.2s;
 }
-/* Nächste Spur: gelb markiert */
-.lane-row.current { background: rgba(251,191,36,0.1); border-color: var(--primary-yellow); color: var(--primary-yellow); }
-/* Überquerte Spuren: grün */
-.lane-row.passed  { background: rgba(83,252,24,0.08); border-color: rgba(83,252,24,0.3); color: var(--primary-green); }
-/* Gefahren-Spuren (nach Aufdeckung): rot */
-.lane-row.danger  { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); color: var(--primary-red); }
+/* Drei mögliche Zustände einer Zeile in der Tabelle: */
+.lane-row.current { background: rgba(251,191,36,0.1); border-color: var(--primary-yellow); color: var(--primary-yellow); } /* als Nächstes dran */
+.lane-row.passed  { background: rgba(83,252,24,0.08); border-color: rgba(83,252,24,0.3); color: var(--primary-green); }   /* bereits sicher überquert */
+.lane-row.danger  { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); color: var(--primary-red); }     /* Gefahr aufgedeckt */
 
 .mute-toggle {
   background: none;
@@ -265,10 +289,15 @@ canvas { display: block; }
 </head>
 <body>
 
+<!-- Diese zwei Elemente werden von fdc-theme.js gesteuert (gemeinsames Skript
+     für ALLE Spiele): schwebende grüne Partikel + ein Glow der der Maus folgt.
+     Deshalb hier nur leere Container – der Inhalt kommt aus dem externen Skript. -->
 <div id="fdc-bg-glow"></div>
 <canvas id="fdc-particle-canvas"></canvas>
+
 <header>
     <div>
+        <!-- Klick aufs Logo → zurück zur Lobby (/main) -->
         <div class="logo-mark" onclick="window.location.href='/main'">FD₵</div>
         <div class="logo-sub">Friedrich-Dessauer-Casino</div>
     </div>
@@ -281,15 +310,19 @@ canvas { display: block; }
   <div id="game-container">
 
     <!-- ====================================================
-         LINKES PANEL
+         LINKES PANEL: Guthaben, Einsatz, Aktions-Buttons
          ==================================================== -->
     <div id="ui-panel">
 
+      <!-- Guthaben-Anzeige. Wird NIE lokal berechnet, sondern kommt
+           immer vom Server über das Socket-Event "updateBalance"
+           (siehe JS weiter unten – wichtig für die Präsentation!) -->
       <div class="stat-box">
         <div class="stat-label">Guthaben</div>
         <div id="balance" class="value">$10,000.00</div>
       </div>
 
+      <!-- Einsatz-Eingabe + drei Schnellauswahl-Buttons -->
       <div>
         <input type="number" id="bet-input" value="100" min="1" />
         <div class="quick-bets">
@@ -299,18 +332,23 @@ canvas { display: block; }
         </div>
       </div>
 
-      <!-- Aktueller Multiplikator -->
+      <!-- Zeigt den aktuellen Multiplikator (steigt mit jeder sicher
+           überquerten Spur exponentiell an – siehe getLaneMult()) -->
       <div class="stat-box">
         <div class="stat-label">Multiplikator</div>
         <div id="current-mult" class="value">–</div>
       </div>
 
-      <!-- Potenzieller Gewinn bei Cash Out jetzt -->
+      <!-- Zeigt, wie viel Geld man bekäme, WENN man JETZT Cash Out drückt -->
       <div class="stat-box">
         <div class="stat-label">Gewinn bei Cash Out</div>
         <div id="potential-win" class="value" style="font-size:17px">–</div>
       </div>
 
+      <!-- Drei Buttons, die je nach Spielphase ein-/ausgeblendet werden:
+           1) Wette Platzieren → startet die Runde
+           2) Nächste Spur     → riskiert die aktuelle Spur zu überqueren
+           3) Cash Out         → beendet die Runde und sichert den Gewinn -->
       <button class="game-btn" id="start-btn"   onclick="startGame()">Wette Platzieren</button>
       <button class="game-btn" id="cross-btn"   onclick="crossLane()">🐔 Nächste Spur</button>
       <button class="game-btn" id="cashout-btn" onclick="cashOut()">💰 Cash Out</button>
@@ -319,219 +357,331 @@ canvas { display: block; }
     </div>
 
     <!-- ====================================================
-         CANVAS – Straßen-Visualisierung
+         CANVAS – hier läuft die komplette Straßen-Animation
          ==================================================== -->
     <div id="canvas-wrapper">
       <canvas id="game-canvas" width="560" height="320"></canvas>
     </div>
 
     <!-- ====================================================
-         RECHTES PANEL – Lane-Tabelle
+         RECHTES PANEL – Lane-Tabelle (Übersicht aller Multiplikatoren)
          ==================================================== -->
     <div id="lane-panel">
       <div class="panel-title">Spuren & Multiplikatoren</div>
-      <!-- Wird per JS generiert -->
+      <!-- Wird per JS mit buildLaneTable() automatisch befüllt -->
     </div>
 
   </div>
 </main>
 
+<!-- fdc-theme.js: gemeinsames Skript für Partikel-Hintergrund & Maus-Glow,
+     wird von ALLEN FDC-Spielen eingebunden (Code-Wiederverwendung) -->
 <script src="/fdc-theme.js"></script>
+
 <script>
+// ================================================================
+//  THE CHICKEN GAME – Spiellogik
+//
+//  SPIELPRINZIP (wichtig für die Präsentation!):
+//  Inspiriert vom bekannten Online-Casino-Spiel "Chicken Road".
+//
+//  - Eine Straße besteht aus 10 Fahrspuren (LANES = 10).
+//  - Für jede Spur wird bei Rundenstart EINMALIG zufällig entschieden,
+//    ob sie "gefährlich" ist (30% Wahrscheinlichkeit, DANGER_PROB).
+//    Diese Entscheidung steht schon fest, bevor der Spieler losläuft –
+//    das Huhn "weiß" es nur noch nicht (genau wie bei Mines/Plinko:
+//    das Zufallsergebnis wird vorab bestimmt, nicht bei jedem Klick neu).
+//  - Der Spieler drückt "Nächste Spur" → das Huhn versucht zu überqueren.
+//    Ist die Spur sicher: Multiplikator steigt, man kann weitermachen
+//    ODER auszahlen lassen (Cash Out).
+//    Ist die Spur gefährlich: Auto erwischt das Huhn → Einsatz komplett weg.
+//
+//  DAS IST DAS KLASSISCHE "PUSH YOUR LUCK"-PRINZIP:
+//  Je weiter man geht, desto höher der Multiplikator, aber auch das
+//  Risiko alles zu verlieren bleibt bei jeder Spur gleich hoch (30%).
+//  Genau dieses Abwägen (Gier vs. Sicherheit) macht das Spiel spannend.
+// ================================================================
 
+// ── Spielkonfiguration (die "Stellschrauben" des Spiels) ────────
 const LANES       = 10;    // Anzahl Fahrspuren auf der Straße
-const DANGER_PROB = 0.30;  // 30% Sterberisiko pro Spur
+const DANGER_PROB = 0.40;  // 30% Sterberisiko PRO SPUR (unabhängig voneinander)
 
-// Multiplikator nach k sicheren Überquerungen
+// ── Multiplikator-Formel ─────────────────────────────────────────
+//
+//  mult(k) = 0.97 / (0.70 ^ k)
+//
+//  WARUM DIESE FORMEL? (das wird euch sicher gefragt!)
+//  Die Überlebenswahrscheinlichkeit einer einzelnen Spur ist 70%
+//  (1 - DANGER_PROB = 0.70). Um k Spuren HINTEREINANDER zu überleben,
+//  multiplizieren sich die Einzelwahrscheinlichkeiten:
+//      P(k Spuren überlebt) = 0.70^k
+//
+//  Ein FAIRER Multiplikator (ohne Gewinnspanne fürs Casino) wäre
+//  genau der Kehrwert dieser Wahrscheinlichkeit: 1 / 0.70^k.
+//  Das würde bedeuten: über viele Runden gemittelt zahlt das Casino
+//  im Schnitt genau so viel aus, wie es einnimmt (Erwartungswert = 0).
+//
+//  Der Faktor 0.97 VOR der Division ist die "House Edge" (Hausvorteil):
+//  Das Casino behält im statistischen Mittel 3% jedes Einsatzes.
+//  Das ist genau das Geschäftsmodell jedes echten Casinos (auch bei
+//  Roulette, Blackjack etc. gibt es immer so eine kleine eingebaute
+//  Gewinnspanne für das Haus – bei uns eben 3%).
+
 function getLaneMult(k) {
-  return 0.97 / Math.pow(0.70, k);
+  return 0.55 / Math.pow(0.60, k);
 }
 
+// ── Canvas-Setup ──────────────────────────────────────────────────
+// Wir holen uns das <canvas>-Element und seinen "2D-Rendering-Context".
+// Der Context ist quasi unser "Malwerkzeug" – darüber zeichnen wir
+// Rechtecke, Texte und Emojis auf die Leinwand.
 const canvas = document.getElementById("game-canvas");
 const ctx    = canvas.getContext("2d");
-const W = canvas.width;   // 560
-const H = canvas.height;  // 320
+const W = canvas.width;   // 560px Breite der Leinwand
+const H = canvas.height;  // 320px Höhe der Leinwand
 
-// Road-Layout (in Pixel)
-const ROAD_LEFT  = 35;                      // X-Position wo Spuren beginnen
-const LANE_W     = 49;                      // Breite jeder Spur
-const ROAD_RIGHT = ROAD_LEFT + LANES * LANE_W; // = 525
-const CHICKEN_Y  = H / 2 + 8;              // Vertikale Position des Huhns
+// ── Straßen-Layout (alles in Pixel-Koordinaten) ──────────────────
+const ROAD_LEFT  = 35;                         // X-Position wo die Straße beginnt
+const LANE_W     = 49;                         // Breite EINER einzelnen Spur in Pixel
+const ROAD_RIGHT = ROAD_LEFT + LANES * LANE_W; // Ende der Straße = 35 + 10*49 = 525
+const CHICKEN_Y  = H / 2 + 8;                  // Vertikale Position des Huhns (Straßenmitte)
 
-// ── Spielzustand ────────────────────────────────────────────────
-let balance      = 0;      // Guthaben des Spielers
-let currentBet   = 100;        // Aktueller Einsatz
-let isMuted      = false;      // Sound
-let gameActive   = false;      // Läuft gerade eine Runde?
-let crossedCount = 0;          // Anzahl erfolgreich überquerter Spuren
-let dangerSet    = new Set();  // Indizes der gefährlichen Spuren (0-9)
-let laneResults  = [];         // Status jeder Spur: 'pending'|'safe'|'danger'|'revealed'
-let crashLaneIdx = -1;         // Index der Spur wo das Huhn gestorben ist (-1 = kein Tod)
+// ── Spielzustand (State) ──────────────────────────────────────────
+// Diese Variablen bilden zusammen den "aktuellen Zustand" der Runde.
+// Wichtig für die Präsentation: Das ist eine kleine State Machine –
+// der Zustand ändert sich schrittweise durch Nutzer-Aktionen.
+let balance      = 0;          // Guthaben – wird NUR vom Server gesetzt (s.u.)
+let currentBet   = 100;        // Der Einsatz für die aktuell laufende Runde
+let isMuted      = false;      // Sound an/aus
+let gameActive   = false;      // true = Runde läuft gerade, false = Runde beendet/nicht gestartet
+let crossedCount = 0;          // Wie viele Spuren wurden schon SICHER überquert?
+let dangerSet    = new Set();  // Enthält die Indizes (0-9) aller gefährlichen Spuren dieser Runde
+let laneResults  = [];         // Status jeder einzelnen Spur: 'pending' | 'safe' | 'danger' | 'revealed'
+let crashLaneIdx = -1;         // Bei welcher Spur ist das Huhn gestorben? (-1 = noch nicht gestorben)
 
-
+// Enthält die Daten der aktuell laufenden Auto-Animation.
+// null bedeutet: gerade läuft keine Animation (Spieler kann klicken).
+// Struktur wenn aktiv: { laneIdx, startTime, safe, done }
 let animState = null;
 
-// socket wird initialisiert und sobald er server update balance schick, wird das gemacht.
+// ================================================================
+//  SOCKET.IO – Echtzeit-Verbindung zum Backend-Server
+//
+//  WICHTIG FÜR DIE PRÄSENTATION:
+//  Die Balance wird NICHT im Frontend berechnet und gespeichert!
+//  Das wäre unsicher (jeder könnte im Browser die Variable manipulieren
+//  und sich selbst Geld geben). Stattdessen läuft es so:
+//
+//   1. Frontend sendet ein Event an den Server:
+//        socket.emit("updateBalance", -100)   // z.B. Einsatz abziehen
+//   2. Der Server (Node.js) berechnet serverseitig den neuen Kontostand
+//      und speichert ihn (z.B. in einer Datenbank oder im RAM).
+//   3. Der Server sendet den NEUEN, korrekten Kontostand zurück:
+//        socket.on("updateBalance", (neuerWert) => { ... })
+//   4. Erst DANN aktualisiert das Frontend die Anzeige.
+//
+//  Das ist ein Client-Server-Modell mit "Server Authority" –
+//  der Server hat immer das letzte Wort über den Kontostand,
+//  das Frontend zeigt nur an, was der Server sagt.
+// ================================================================
 const socket = io(`http://${IP}:3000`, {
-    withCredentials: true,
-    transports: ["websocket"]
+    withCredentials: true,   // Sendet Cookies/Session-Infos mit (Login-Zugehörigkeit)
+    transports: ["websocket"] // Erzwingt WebSocket-Protokoll (persistente Verbindung,
+                               // schneller als wiederholte HTTP-Anfragen)
 });
 
+// Reagiert JEDES MAL, wenn der Server uns einen neuen Kontostand schickt
+// (egal ob nach Einsatz, Gewinn oder beim ersten Laden der Seite).
 socket.on("updateBalance", (newBalance) => {
     balance = newBalance;
-    updateBalance();
+    updateBalance(); // Anzeige im UI aktualisieren
 });
 
-// ── Balance & Bet ────────────────────────────────────────────────
+// ── Balance-Anzeige & Einsatz-Hilfsfunktionen ────────────────────
 function updateBalance() {
+  // toLocaleString formatiert die Zahl mit Tausendertrennzeichen
+  // und immer genau 2 Nachkommastellen (z.B. 10000 → "10,000.00")
   document.getElementById("balance").innerText =
     `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 }
 
 function setBet(v) {
+  // Einsatz darf nur geändert werden, wenn gerade KEINE Runde läuft
   if (!gameActive) document.getElementById("bet-input").value = v;
 }
 
-// ── Sound-Engine ────────────────────────────────────────────────
+// ================================================================
+//  SOUND-ENGINE – Web Audio API
+//
+//  Wir erzeugen Sounds NICHT aus Audio-Dateien, sondern synthetisieren
+//  sie direkt im Browser mit Sinus-/Sägezahn-Wellen. Vorteil: keine
+//  Dateien laden, minimale Ladezeit, beliebig anpassbar per Code.
+// ================================================================
 function toggleMute() {
   isMuted = !isMuted;
   document.getElementById("mute-btn").innerText = isMuted ? "🔇 MUTED" : "🔊 SOUND ON";
 }
 
+// Erzeugt einen einzelnen Ton.
+//   freq  = Tonhöhe in Hz (höhere Zahl = höherer Ton)
+//   type  = Wellenform ("sine" = weich, "sawtooth" = kratzig/aggressiv)
+//   dur   = Dauer in Sekunden
+//   vol   = Lautstärke (0.0 – 1.0)
 function tone(freq, type, dur, vol) {
-  if (isMuted) return;
+  if (isMuted) return; // Bei Mute gar nicht erst starten
   try {
+    // AudioContext ist die "Sound-Fabrik" des Browsers
     const a = new (window.AudioContext || window.webkitAudioContext)();
-    const o = a.createOscillator(), g = a.createGain();
+    const o = a.createOscillator(); // Erzeugt die eigentliche Tonwelle
+    const g = a.createGain();       // Steuert die Lautstärke über die Zeit
     o.type = type;
     o.frequency.setValueAtTime(freq, a.currentTime);
     g.gain.setValueAtTime(vol, a.currentTime);
+    // Lautstärke klingt exponentiell ab (klingt natürlicher als abruptes Stoppen)
     g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
-    o.connect(g); g.connect(a.destination);
+    o.connect(g); g.connect(a.destination); // Verkabelung: Oszillator → Lautstärke → Lautsprecher
     o.start(); o.stop(a.currentTime + dur);
   } catch(e) {}
 }
 
+// Vordefinierte Sound-Effekte für die verschiedenen Spielereignisse
 const sounds = {
-  // Huhn überquert sicher: aufsteigender Ton
+  // Huhn überquert sicher: zwei aufsteigende Töne (positives Gefühl)
   safe:  () => { tone(600, "sine", 0.1, 0.05); setTimeout(() => tone(800, "sine", 0.1, 0.05), 80); },
-  // Unfall: dumpfer Crash-Sound
+  // Unfall: zwei tiefe, kratzige Töne (negatives Gefühl)
   crash: () => { tone(200, "sawtooth", 0.4, 0.07); setTimeout(() => tone(100, "sawtooth", 0.3, 0.07), 200); },
-  // Gewinn-Jingle beim Cash Out
+  // Gewinn-Jingle beim Cash Out: drei aufsteigende Töne (kleine Melodie, C-E-G Dreiklang)
   win:   () => { tone(523, "sine", 0.15, 0.08); setTimeout(() => tone(659, "sine", 0.15, 0.08), 100); setTimeout(() => tone(784, "sine", 0.3, 0.08), 200); },
-  // Reifenquietschen beim Auto-Vorbeifahren
+  // Reifenquietschen beim Auto-Vorbeifahren (tiefer, kratziger Dauerton)
   car:   () => tone(150, "sawtooth", 0.5, 0.025)
 };
 
-// ── Huhn-Position auf dem Canvas ────────────────────────────────
-// k = crossedCount (Anzahl überquerter Spuren)
-//   k=0:  x=17  → linker Sicherheitsbereich (vor Straße)
-//   k=1:  x=84  → Grenze zwischen Spur 0 und 1
-//   k=10: x=542 → rechter Sicherheitsbereich (nach Straße)
+// ── Huhn-Position auf dem Canvas berechnen ───────────────────────
+// k = crossedCount (Anzahl bereits sicher überquerter Spuren)
+//   k=0:  Huhn steht in der Start-Zone (links, vor der ersten Spur)
+//   k=10: Huhn steht in der Ziel-Zone (rechts, alle Spuren geschafft)
+//   sonst: Huhn steht GENAU auf der Grenzlinie zwischen Spur k-1 und k
 function getChickenX(k) {
   if (k === 0)       return 17;                     // Start-Zone links
   if (k >= LANES)    return ROAD_RIGHT + 17;         // Ziel-Zone rechts
-  return ROAD_LEFT + k * LANE_W;                     // Zwischen Spur k-1 und k
+  return ROAD_LEFT + k * LANE_W;                     // Position zwischen zwei Spuren
 }
 
-// ── Lane-Tabelle aufbauen (rechtes Panel) ───────────────────────
+// ── Rechtes Panel: Multiplikator-Tabelle dynamisch erzeugen ─────
+// Wird nur EINMAL beim Laden der Seite aufgerufen (die Multiplikatoren
+// selbst ändern sich ja nie – nur ihre FARBE ändert sich während des Spiels)
 function buildLaneTable() {
   const panel = document.getElementById("lane-panel");
-  panel.querySelectorAll(".lane-row").forEach(r => r.remove());
+  panel.querySelectorAll(".lane-row").forEach(r => r.remove()); // Alte Einträge löschen (falls vorhanden)
 
   for (let i = 0; i < LANES; i++) {
-    const row = document.createElement("div");
+    const row = document.createElement("div"); // Neues <div> per JS erzeugen
     row.className = "lane-row";
-    row.id = `lr-${i}`;
+    row.id = `lr-${i}`; // eindeutige ID zum späteren Wiederfinden (lr-0, lr-1, ...)
     row.innerHTML = `<span>Spur ${i + 1}</span><span>${getLaneMult(i + 1).toFixed(2)}x</span>`;
-    panel.appendChild(row);
+    panel.appendChild(row); // Ins DOM einfügen
   }
 }
 
-// Lane-Tabelle Farbzustand updaten
+// Färbt die Tabellen-Zeilen passend zum aktuellen Spielfortschritt ein.
+// Wird nach JEDER Spur-Überquerung neu aufgerufen.
 function updateLaneTable() {
   for (let i = 0; i < LANES; i++) {
     const row = document.getElementById(`lr-${i}`);
     if (!row) continue;
-    row.classList.remove("current", "passed", "danger");
-    if      (laneResults[i] === 'safe')     row.classList.add("passed");
-    else if (laneResults[i] === 'danger' || laneResults[i] === 'revealed') row.classList.add("danger");
-    else if (gameActive && i === crossedCount) row.classList.add("current");
+    row.classList.remove("current", "passed", "danger"); // Erst alle alten Zustände entfernen
+    if      (laneResults[i] === 'safe')     row.classList.add("passed");  // grün: geschafft
+    else if (laneResults[i] === 'danger' || laneResults[i] === 'revealed') row.classList.add("danger"); // rot: Gefahr
+    else if (gameActive && i === crossedCount) row.classList.add("current"); // gelb: als Nächstes dran
   }
 }
 
-// ── Gefährliche Spuren für diese Runde festlegen ─────────────────
-// Wird einmal bei Spielstart aufgerufen und bleibt dann konstant
+// ── Zufalls-Generierung: welche Spuren sind diese Runde gefährlich? ─
+//
+//  WICHTIGES KONZEPT FÜR RÜCKFRAGEN:
+//  Diese Funktion läuft GENAU EINMAL bei Rundenstart. Das Ergebnis
+//  steht danach fest und ändert sich nicht mehr – auch wenn der Spieler
+//  mehrmals "Nächste Spur" klickt. Das ist wichtig für die Fairness:
+//  Würde man bei JEDEM Klick neu würfeln ob die AKTUELLE Spur gefährlich
+//  ist, könnte man die Wahrscheinlichkeit theoretisch durch Klick-Timing
+//  beeinflussen. So ist es sauberer: Das komplette Zufallsergebnis für
+//  die ganze Straße steht schon fest, bevor das Huhn den ersten Schritt macht.
 function placeDangerLanes() {
   dangerSet.clear();
-  laneResults = Array(LANES).fill('pending');
+  laneResults = Array(LANES).fill('pending'); // Alle 10 Spuren erstmal auf "offen" setzen
   for (let i = 0; i < LANES; i++) {
+    // Math.random() liefert eine Zahl zwischen 0.0 und 1.0 (gleichverteilt).
+    // Ist sie kleiner als 0.30, gilt die Spur als gefährlich → macht im
+    // Schnitt über viele Durchläufe genau 30% Trefferquote.
     if (Math.random() < DANGER_PROB) dangerSet.add(i);
   }
 }
 
-// ── Spiel starten ───────────────────────────────────────────────
+// ── Runde starten (Button "Wette Platzieren") ────────────────────
 function startGame() {
+  // Einsatz aus dem Eingabefeld lesen und validieren
   currentBet = parseFloat(document.getElementById("bet-input").value);
   if (!currentBet || currentBet <= 0 || currentBet > balance) {
-    alert("Ungültiger Einsatz!"); return;
+    alert("Ungültiger Einsatz!"); return; // Kein Einsatz > Guthaben, kein negativer/leerer Wert
   }
 
-  // Einsatz abziehen
+  // Einsatz sofort beim Server abziehen (negativer Betrag = Abzug).
+  // Der Server antwortet dann über das "updateBalance"-Event von oben
+  // mit dem neuen, tatsächlichen Kontostand.
   socket.emit("updateBalance", (-currentBet));
 
-
-  // Spielzustand zurücksetzen
+  // Kompletten Spielzustand für die neue Runde zurücksetzen
   gameActive   = true;
   crossedCount = 0;
   crashLaneIdx = -1;
   animState    = null;
-  placeDangerLanes();
+  placeDangerLanes();  // NEUE Zufallsverteilung der Gefahren-Spuren für diese Runde
   buildLaneTable();
   updateLaneTable();
 
-  // UI für aktives Spiel
-  document.getElementById("start-btn").disabled = true;
-  document.getElementById("bet-input").disabled = true;
+  // UI in den "Runde läuft"-Zustand versetzen
+  document.getElementById("start-btn").disabled = true;   // Kann nicht doppelt gestartet werden
+  document.getElementById("bet-input").disabled = true;   // Einsatz während Runde einfrieren
   document.getElementById("cross-btn").classList.add("visible");
   document.getElementById("cross-btn").disabled = false;
-  document.getElementById("cashout-btn").classList.remove("visible");
+  document.getElementById("cashout-btn").classList.remove("visible"); // Erst nach 1. Erfolg sichtbar
   document.getElementById("current-mult").innerText  = "1.00x";
   document.getElementById("potential-win").innerText = `$${currentBet.toFixed(2)}`;
 }
 
-// ── Nächste Spur überqueren (Button-Klick) ──────────────────────
+// ── Button "Nächste Spur" wurde geklickt ─────────────────────────
 function crossLane() {
-  // Keine Überquerung wenn Spiel inaktiv oder Animation läuft
+  // Schutz vor Doppel-Klicks: keine neue Überquerung wenn Spiel inaktiv
+  // ist oder bereits eine Auto-Animation läuft
   if (!gameActive || animState) return;
 
-  const lane   = crossedCount;           // Index der nächsten Spur (0-basiert)
-  const isSafe = !dangerSet.has(lane);   // Ist diese Spur sicher oder gefährlich?
+  const lane   = crossedCount;           // Index der Spur, die jetzt versucht wird (0-basiert)
+  const isSafe = !dangerSet.has(lane);   // War diese Spur bei Rundenstart als sicher markiert?
 
-  // Buttons während Animation sperren
+  // Buttons während der Animation sperren (verhindert Klicks mitten in der Bewegung)
   document.getElementById("cross-btn").disabled   = true;
   document.getElementById("cashout-btn").disabled = true;
 
-  sounds.car(); // Reifenquietschen
+  sounds.car(); // Reifenquietschen-Sound sofort abspielen
 
-  // Animation starten: Auto fährt durch diese Spur
+  // Animation-Objekt anlegen. Das eigentliche Ergebnis (sicher/gefährlich)
+  // steht JETZT schon fest – die Animation zeigt es nur noch VISUELL an.
   animState = {
-    laneIdx:   lane,          // Welche Spur wird animiert?
-    startTime: performance.now(), // Startzeitpunkt der Animation
-    safe:      isSafe,        // Wird das Huhn überleben?
-    done:      false          // Wurde die Animation-Auflösung schon getriggert?
+    laneIdx:   lane,
+    startTime: performance.now(), // Hochpräziser Zeitstempel für die Animation
+    safe:      isSafe,
+    done:      false              // Verhindert, dass resolveAnimation() doppelt aufgerufen wird
   };
 }
 
-// ── Ergebnis der Animation auswerten ────────────────────────────
-// Wird aufgerufen nachdem die 700ms Animation beendet ist
+// ── Ergebnis der Animation auswerten (wird nach ~700ms aufgerufen) ─
 function resolveAnimation(safe) {
-  animState = null; // Animation-State löschen
+  animState = null; // Animation-Zustand zurücksetzen → nächster Klick wieder möglich
 
   if (safe) {
-    // ── SICHER – Huhn hat überquert ──────────────────────────────
+    // ── FALL 1: SICHER – Huhn hat die Spur überlebt ────────────────
     laneResults[crossedCount] = 'safe';
-    crossedCount++;
+    crossedCount++; // Fortschritt erhöhen
     sounds.safe();
 
     const mult = getLaneMult(crossedCount);
@@ -541,42 +691,51 @@ function resolveAnimation(safe) {
     updateLaneTable();
 
     if (crossedCount >= LANES) {
-      // Alle 10 Spuren überquert → automatisch auszahlen!
+      // Spieler hat ALLE 10 Spuren geschafft → automatisch auszahlen,
+      // es gibt ja keine 11. Spur mehr zu wählen
       cashOut();
     } else {
-      // Nächste Spur ist verfügbar
+      // Nächste Spur steht zur Verfügung – Spieler kann weitermachen oder aufhören
       document.getElementById("cross-btn").disabled   = false;
-      document.getElementById("cashout-btn").classList.add("visible");
+      document.getElementById("cashout-btn").classList.add("visible"); // Ab jetzt Cash-Out möglich
       document.getElementById("cashout-btn").disabled = false;
     }
 
   } else {
-    // ── UNFALL – Huhn wurde vom Auto erwischt ─────────────────────
+    // ── FALL 2: UNFALL – Huhn wurde vom Auto erwischt ───────────────
     laneResults[crossedCount] = 'danger';
-    crashLaneIdx = crossedCount; // Speichern wo das Huhn gestorben ist
+    crashLaneIdx = crossedCount; // Position merken, damit die Explosion an der richtigen Stelle erscheint
 
-    // Alle weiteren Gefahren offenbaren (was noch gekommen wäre)
+    // Alle NOCH KOMMENDEN Gefahren-Spuren aufdecken, damit der Spieler
+    // sieht, was ihn erwartet hätte ("Transparenz nach Rundenende")
     for (let i = crossedCount + 1; i < LANES; i++) {
       if (dangerSet.has(i)) laneResults[i] = 'revealed';
     }
 
     sounds.crash();
     updateLaneTable();
-    endGame(false);
+    endGame(false); // Runde verloren beenden
   }
 }
 
-// ── Cash Out ────────────────────────────────────────────────────
+// ── Button "Cash Out" wurde geklickt ─────────────────────────────
 function cashOut() {
+  // Cash Out nur möglich wenn: Runde läuft, mind. 1 Spur geschafft,
+  // und gerade keine Animation läuft (sonst könnte man mitten in einer
+  // gefährlichen Animation noch schnell auszahlen wollen – unfair)
   if (!gameActive || crossedCount === 0 || animState) return;
 
   const mult = getLaneMult(crossedCount);
   const win  = currentBet * mult;
-  
+
+  // Gewinn wird dem Server gemeldet (positiver Betrag = Gutschrift).
+  // Genau wie beim Einsatz-Abzug antwortet der Server dann mit dem
+  // neuen, korrekten Kontostand über "updateBalance".
   socket.emit("updateBalance", (win));
   sounds.win();
 
-  // Alle weiteren Gefahren offenbaren
+  // Auch bei erfolgreichem Cash Out: verbleibende Gefahren-Spuren zeigen
+  // (Spieler sieht z.B. "puh, Spur 7 wäre ein Auto gewesen")
   for (let i = crossedCount; i < LANES; i++) {
     if (dangerSet.has(i)) laneResults[i] = 'revealed';
   }
@@ -586,12 +745,12 @@ function cashOut() {
   endGame(true);
 }
 
-// ── Spiel beenden ───────────────────────────────────────────────
+// ── Runde beenden (gemeinsamer Aufräum-Code für Sieg UND Niederlage) ─
 function endGame(won) {
   gameActive = false;
   animState  = null;
 
-  // Buttons zurücksetzen
+  // UI zurück in den "bereit für neue Runde"-Zustand versetzen
   document.getElementById("start-btn").disabled = false;
   document.getElementById("bet-input").disabled = false;
   document.getElementById("cross-btn").classList.remove("visible");
@@ -604,63 +763,72 @@ function endGame(won) {
   }
 }
 
-// ── Verlaufs-Eintrag hinzufügen ─────────────────────────────────
+// ── Neuen Eintrag im Verlaufs-Log hinzufügen ─────────────────────
 function addHistory(won, lanes, mult, amount) {
   const h    = document.getElementById("history");
   const item = document.createElement("div");
   item.className = "history-item";
 
   if (won) {
+    // Grüne Schrift bei gutem Multiplikator (>=2x), sonst neutral weiß
     const c = mult >= 2 ? "var(--primary-green)" : "#fff";
     item.innerHTML = `<span>Spur ${lanes} · ${mult.toFixed(2)}x</span><span style="color:${c}">+$${amount.toFixed(2)}</span>`;
   } else {
     item.innerHTML = `<span>💥 Spur ${lanes + 1}</span><span style="color:var(--primary-red)">-$${Math.abs(amount).toFixed(2)}</span>`;
   }
 
-  h.prepend(item);
-  if (h.children.length > 8) h.removeChild(h.lastChild);
+  h.prepend(item); // Neuester Eintrag immer ganz oben
+  if (h.children.length > 8) h.removeChild(h.lastChild); // Liste auf max. 8 Einträge begrenzen
 }
 
 // ================================================================
-//  CANVAS – Szene zeichnen
-//  Wird in jedem Frame vom gameLoop aufgerufen
+//  CANVAS-RENDERING – die komplette Straßen-Szene
+//
+//  WICHTIGES KONZEPT: Diese Funktion zeichnet JEDEN EINZELNEN FRAME
+//  komplett neu (ca. 60x pro Sekunde). Nichts bleibt "stehen" – wir
+//  löschen die Leinwand am Anfang jedes Mal komplett (clearRect) und
+//  malen alles neu. Das ist das Standard-Prinzip von Canvas-Animation
+//  (vergleichbar mit einem Daumenkino: viele Einzelbilder in Folge).
 // ================================================================
 function drawScene(now) {
-  ctx.clearRect(0, 0, W, H);
+  ctx.clearRect(0, 0, W, H); // Leinwand für diesen Frame komplett leeren
 
-  // ── Straßen-Hintergrund ──────────────────────────────────────
+  // ── Straßen-Hintergrund (dunkelgrau, wie Asphalt) ──────────────
   ctx.fillStyle = "#111418";
   ctx.fillRect(0, 0, W, H);
 
-  // Straßenrand (dunkler Streifen oben/unten)
+  // Straßenrand oben/unten (etwas dunkler für 3D-Tiefeneffekt)
   ctx.fillStyle = "#0a0c0f";
   ctx.fillRect(0, 0, W, 6);
   ctx.fillRect(0, H - 6, W, 6);
 
-  // ── Start-Zone (links, grün) ──────────────────────────────────
+  // ── Start-Zone links (grün = sicherer Gehweg) ──────────────────
   ctx.fillStyle = "#052e16";
   ctx.fillRect(0, 0, ROAD_LEFT, H);
 
-  // ── Ziel-Zone (rechts, grün) ──────────────────────────────────
+  // ── Ziel-Zone rechts (grün = sicherer Gehweg) ──────────────────
   ctx.fillStyle = "#052e16";
   ctx.fillRect(ROAD_RIGHT, 0, W - ROAD_RIGHT, H);
 
-  // ── Spur-Overlays (Statusfarben) ────────────────────────────────
+  // ── Farbige Overlays über jeder Spur je nach Status ─────────────
   for (let i = 0; i < LANES; i++) {
-    const lx = ROAD_LEFT + i * LANE_W;
+    const lx = ROAD_LEFT + i * LANE_W; // linke X-Kante dieser Spur
 
     if (laneResults[i] === 'safe') {
-      // Erfolgreich überquerte Spur: grüner Schimmer
+      // Bereits sicher überquerte Spur: leichter grüner Schimmer
       ctx.fillStyle = "rgba(83,252,24,0.09)";
       ctx.fillRect(lx, 0, LANE_W, H);
 
     } else if (laneResults[i] === 'danger' || laneResults[i] === 'revealed') {
-      // Gefahren-Spur (nach Aufdeckung): roter Schimmer
+      // Gefahren-Spur (aufgedeckt): leichter roter Schimmer
       ctx.fillStyle = "rgba(239,68,68,0.14)";
       ctx.fillRect(lx, 0, LANE_W, H);
     }
 
-    // Nächste Spur leuchtet gelb (pulsierend) wenn Spiel aktiv
+    // Die NÄCHSTE zu überquerende Spur pulsiert sanft gelb.
+    // Math.sin(now / 200) erzeugt eine Welle zwischen -1 und 1, die sich
+    // über die Zeit (now = aktueller Zeitstempel) ständig ändert →
+    // dadurch entsteht der "pulsierende" Effekt ganz ohne CSS-Animation.
     if (gameActive && i === crossedCount && !animState) {
       const pulse = 0.07 + 0.04 * Math.sin(now / 200);
       ctx.fillStyle = `rgba(251,191,36,${pulse})`;
@@ -668,47 +836,48 @@ function drawScene(now) {
     }
   }
 
-  // ── Spur-Trennlinien (gelb gestrichelt) ──────────────────────
-  ctx.setLineDash([10, 7]);
+  // ── Gestrichelte gelbe Fahrbahn-Trennlinien zwischen den Spuren ─
+  ctx.setLineDash([10, 7]); // 10px Strich, 7px Lücke → "gestrichelt"
   ctx.strokeStyle = "rgba(251,191,36,0.30)";
   ctx.lineWidth   = 1.5;
   for (let i = 1; i < LANES; i++) {
     const x = ROAD_LEFT + i * LANE_W;
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
   }
-  ctx.setLineDash([]);
+  ctx.setLineDash([]); // Striche zurücksetzen (sonst gilt es für ALLE folgenden Linien)
 
-  // Straßenkanten (weiße Linien)
+  // Durchgezogene weiße Linien an den äußeren Straßenkanten
   ctx.strokeStyle = "rgba(255,255,255,0.25)";
   ctx.lineWidth   = 2;
   ctx.beginPath(); ctx.moveTo(ROAD_LEFT, 0);  ctx.lineTo(ROAD_LEFT, H);  ctx.stroke();
   ctx.beginPath(); ctx.moveTo(ROAD_RIGHT, 0); ctx.lineTo(ROAD_RIGHT, H); ctx.stroke();
 
-  // ── Spur-Nummern (oben) ──────────────────────────────────────
+  // ── Spur-Nummern oben (1-10), farblich passend zum Status ──────
   ctx.textAlign    = "center";
   ctx.textBaseline = "top";
   for (let i = 0; i < LANES; i++) {
-    const cx     = ROAD_LEFT + i * LANE_W + LANE_W / 2;
+    const cx     = ROAD_LEFT + i * LANE_W + LANE_W / 2; // horizontale Mitte der Spur
     const isDone = laneResults[i] === 'safe';
     const isDang = laneResults[i] === 'danger' || laneResults[i] === 'revealed';
     const isNext = gameActive && i === crossedCount;
     ctx.font      = "bold 11px Inter";
+    // Bedingte Farbwahl: grün > rot > gelb > grau (Priorität von oben nach unten)
     ctx.fillStyle = isDone ? "#53fc18" : isDang ? "#ef4444" : isNext ? "#fbbf24" : "#2a2d30";
     ctx.fillText(i + 1, cx, 10);
   }
 
-  // ── Autos auf aufgedeckten Gefahren-Spuren ───────────────────
+  // ── Statische Autos auf bereits aufgedeckten Gefahren-Spuren ───
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   for (let i = 0; i < LANES; i++) {
     if (laneResults[i] === 'revealed') {
       const cx = ROAD_LEFT + i * LANE_W + LANE_W / 2;
       ctx.font = "20px serif";
-      ctx.fillText("🚗", cx, H / 2);
+      ctx.fillText("🚗", cx, H / 2); // Emoji direkt als Text zeichnen (einfacher als eigene Grafiken)
     }
   }
 
-  // ── Multiplikatoren unter den Spuren ─────────────────────────
+  // ── Multiplikator-Beschriftung unter jeder Spur ─────────────────
   ctx.textBaseline = "bottom";
   for (let i = 0; i < LANES; i++) {
     const cx     = ROAD_LEFT + i * LANE_W + LANE_W / 2;
@@ -721,7 +890,7 @@ function drawScene(now) {
     ctx.fillText(mult.toFixed(1) + "x", cx, H - 4);
   }
 
-  // ── Beschriftung der Sicherheitszonen ────────────────────────
+  // ── Beschriftungen "START" und "ZIEL" in den grünen Randzonen ──
   ctx.font      = "bold 9px Inter";
   ctx.fillStyle = "#166534";
   ctx.textAlign = "center";
@@ -729,13 +898,16 @@ function drawScene(now) {
   ctx.fillText("START", ROAD_LEFT / 2, H / 2 - 20);
   ctx.fillText("ZIEL",  ROAD_RIGHT + (W - ROAD_RIGHT) / 2, H / 2 - 20);
 
-  // ── Animiertes Auto (während Überquerungs-Versuch) ───────────
+  // ── Animiertes Auto während eines laufenden Überquerungs-Versuchs ─
   if (animState) {
-    const elapsed = now - animState.startTime;
-    const DUR     = 700; // Animations-Dauer in Millisekunden
-    const t       = Math.min(elapsed / DUR, 1); // Fortschritt 0.0 → 1.0
+    const elapsed = now - animState.startTime; // Wie viel Zeit ist seit Animationsstart vergangen?
+    const DUR     = 700; // Gesamtdauer der Animation in Millisekunden
+    // t läuft linear von 0.0 (Start) bis 1.0 (Ende) über die Dauer DUR.
+    // Math.min sorgt dafür, dass t niemals über 1.0 hinausgeht.
+    const t       = Math.min(elapsed / DUR, 1);
 
-    // Auto fährt von oben (y=-35) nach unten (y=H+35)
+    // Lineare Interpolation der Auto-Position: von oberhalb des Canvas (-35)
+    // bis unterhalb des Canvas (H+35) – das Auto "durchquert" die Straße vertikal.
     const carX = ROAD_LEFT + animState.laneIdx * LANE_W + LANE_W / 2;
     const carY = -35 + t * (H + 70);
 
@@ -744,45 +916,56 @@ function drawScene(now) {
     ctx.textBaseline = "middle";
     ctx.fillText("🚗", carX, carY);
 
-    // Animation fertig → Ergebnis auswerten (nur einmal!)
+    // Sobald die Animation fertig ist (t erreicht 1.0), einmalig das
+    // Ergebnis auswerten. Das "!animState.done"-Flag verhindert, dass
+    // dies bei jedem weiteren Frame erneut ausgelöst wird.
     if (t >= 1 && !animState.done) {
       animState.done = true;
       const safe = animState.safe;
-      // Kurze Pause damit der Spieler die Endposition des Autos sieht
+      // Kurze 100ms Verzögerung, damit der Spieler das Auto noch am
+      // unteren Bildschirmrand sieht, bevor das Ergebnis "einschlägt"
       setTimeout(() => { animState = null; resolveAnimation(safe); }, 100);
     }
   }
 
-  // ── Huhn oder Explosion ──────────────────────────────────────
+  // ── Das Huhn selbst (oder eine Explosion, falls es gestorben ist) ─
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   ctx.font         = "30px serif";
 
   if (crashLaneIdx >= 0) {
-    // Huhn ist tot → Explosion an der Absturzstelle zeigen
+    // Huhn ist tot → an der Absturz-Position eine Explosion zeigen
     const explosionX = ROAD_LEFT + crashLaneIdx * LANE_W + LANE_W / 2;
     ctx.fillText("💥", explosionX, CHICKEN_Y);
 
   } else {
-    // Huhn lebt → an aktueller Position mit leichtem Wackeln
+    // Huhn lebt: Position abhängig vom Fortschritt (crossedCount)
     const chickenX = getChickenX(crossedCount);
-    // Huhn wippt sanft hoch/runter wenn keine Animation läuft
+    // Sanftes Auf-und-Ab-Wippen als "Lebenszeichen", nur wenn gerade
+    // KEINE Animation läuft und die Runde aktiv ist (wieder Math.sin
+    // für eine gleichmäßige, sich wiederholende Wellenbewegung)
     const bob = (!animState && gameActive) ? Math.sin(now / 220) * 3 : 0;
     ctx.fillText("🐔", chickenX, CHICKEN_Y + bob);
   }
 }
 
 // ── Haupt-Render-Loop ────────────────────────────────────────────
-// Läuft dauerhaft mit requestAnimationFrame für flüssige Animation
+//
+//  requestAnimationFrame ist die Standard-Browser-API für flüssige
+//  Animationen. Sie ruft unsere Funktion automatisch synchron zur
+//  Bildwiederholrate des Monitors auf (meist 60x pro Sekunde) und
+//  übergibt uns dabei automatisch einen Zeitstempel ("now").
+//  Das ist effizienter als z.B. setInterval, weil der Browser die
+//  Animation pausiert, wenn der Tab nicht sichtbar ist (spart Akku/CPU).
 function gameLoop(now) {
-  drawScene(now);
-  requestAnimationFrame(gameLoop);
+  drawScene(now);                    // Aktuellen Frame zeichnen
+  requestAnimationFrame(gameLoop);   // Sich selbst für den NÄCHSTEN Frame erneut anmelden
 }
 
-// ── Initialisierung ──────────────────────────────────────────────
-buildLaneTable();
-updateBalance();
-requestAnimationFrame(gameLoop); // Canvas-Loop starten
+// ── Initialisierung beim Laden der Seite ─────────────────────────
+buildLaneTable();          // Multiplikator-Tabelle rechts einmalig aufbauen
+updateBalance();           // Balance-Anzeige initial rendern (0 bis Server antwortet)
+requestAnimationFrame(gameLoop); // Render-Loop starten → Spiel läuft ab jetzt dauerhaft
 </script>
 
 </body>
